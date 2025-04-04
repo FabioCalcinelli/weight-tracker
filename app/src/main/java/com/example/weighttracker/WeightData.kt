@@ -1,3 +1,5 @@
 package com.example.weighttracker
 
-data class WeightData(val data: String, val weight: Double)
+import java.time.LocalDate
+
+data class WeightData(val date: LocalDate, val weight: Double)
