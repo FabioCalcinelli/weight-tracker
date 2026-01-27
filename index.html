@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weight Tracker</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="manifest" href="manifest.json">
+
+    <meta name="theme-color" content="#2196F3">
+</head>
+<body>
+
+    <h2>Weight Tracker</h2>
+
+    <input type="number" id="weightInput" placeholder="Enter weight" step="0.1">
+    <button onclick="saveWeight()">Save</button>
+
+    <ul id="history"></ul>
+
+    <script src="app.js"></script>
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+      }
+    </script>
+</body>
+</html>
