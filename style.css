@@ -112,6 +112,26 @@ input[type="number"]:focus {
     box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
 }
 
+input[type="date"].error,
+input[type="number"].error {
+    border-color: #d32f2f;
+    background: #ffe5e5;
+}
+
+input[type="date"].error:focus,
+input[type="number"].error:focus {
+    border-color: #d32f2f;
+    box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.1);
+}
+
+.error-message {
+    color: #d32f2f;
+    font-size: 13px;
+    margin-top: 6px;
+    font-weight: 500;
+    animation: slideIn 0.2s ease;
+}
+
 .button-group {
     display: flex;
     gap: 12px;

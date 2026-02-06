@@ -7,23 +7,36 @@ function getDate(dateInput) {
 }
 
 let lastSaveTime = 0;
-const SAVE_COOLDOWN = 2000; // 1 second cooldown
+const SAVE_COOLDOWN = 1500;
 
 function saveWeight() {
     const currentTime = Date.now();
     const timeSinceLastSave = currentTime - lastSaveTime;
     
-    // Prevent saving if less than 1 second has passed since last save
     if (timeSinceLastSave < SAVE_COOLDOWN) {
         return;
     }
+    
+    const weightInput = document.getElementById('weightInput');
+    const weightError = document.getElementById('weightError');
+    const weight = weightInput.value.trim();
+    
+    // Validate that weight is not empty
+    if (weight === '' || isNaN(weight)) {
+        weightError.textContent = 'Please enter a valid weight value.';
+        weightInput.classList.add('error');
+        return;
+    }
+    
+    // Clear any previous error
+    weightError.textContent = '';
+    weightInput.classList.remove('error');
     
     lastSaveTime = currentTime;
     
     const saveButton = document.querySelector('button.save');
     saveButton.classList.add('clicked');
     
-    const weight = document.getElementById('weightInput').value;
     const dateInput = document.getElementById('dateInput').value;
     const date = getDate(dateInput);
 
@@ -34,6 +47,9 @@ function saveWeight() {
     localStorage.setItem('weightData', JSON.stringify(history));
 
     renderHistory();
+    
+    // Clear the weight input after successful save
+    weightInput.value = '';
     
     // Remove the clicked class after the cooldown period
     setTimeout(() => {
@@ -133,6 +149,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Set default date to today
     document.getElementById('dateInput').valueAsDate = new Date();
+    
+    // Clear error when user starts typing in weight input
+    const weightInput = document.getElementById('weightInput');
+    const weightError = document.getElementById('weightError');
+    
+    weightInput.addEventListener('input', function() {
+        if (weightError.textContent !== '') {
+            weightError.textContent = '';
+            weightInput.classList.remove('error');
+        }
+    });
 });
 
 // Load history when app opens
