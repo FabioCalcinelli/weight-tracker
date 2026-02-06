@@ -1,13 +1,25 @@
 export function getWeightHistory() {
-    return JSON.parse(localStorage.getItem('weightData')) || [];
+    const history = JSON.parse(localStorage.getItem('weightData')) || [];
+    // Normalize all weights to one decimal place when loading
+    return history.map(entry => ({
+        date: entry.date,
+        weight: parseFloat(entry.weight).toFixed(1)
+    }));
 }
 
 export function saveWeightEntry(date, weight) {
     const history = getWeightHistory();
-    history.push({ date, weight });
+    // Ensure weight is always stored with one decimal place
+    const normalizedWeight = parseFloat(weight).toFixed(1);
+    history.push({ date, weight: normalizedWeight });
     localStorage.setItem('weightData', JSON.stringify(history));
 }
 
 export function saveHistory(history) {
-    localStorage.setItem('weightData', JSON.stringify(history));
+    // Normalize all weights to one decimal place before saving
+    const normalizedHistory = history.map(entry => ({
+        date: entry.date,
+        weight: parseFloat(entry.weight).toFixed(1)
+    }));
+    localStorage.setItem('weightData', JSON.stringify(normalizedHistory));
 }

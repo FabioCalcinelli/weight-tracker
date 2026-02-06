@@ -9,7 +9,8 @@ function generateExportFilename() {
 }
 
 function formatCSVRow(entry) {
-    return `"${entry.weight}","=""${entry.date}"""`;
+    const weight = parseFloat(entry.weight).toFixed(1).replace('.', ',');
+    return `"${weight}","=""${entry.date}"""`;
 }
 
 function buildCSVContent(history) {
@@ -50,7 +51,9 @@ export function exportToCSV() {
 function parseExcelCSVLine(line) {
     const matches = line.match(/^"([^"]*)","=""([^"]*)"""/);
     if (matches && matches.length === 3) {
-        return { weight: matches[1], date: matches[2] };
+        // Convert comma decimal separator to period
+        const weight = matches[1].replace(',', '.');
+        return { weight, date: matches[2] };
     }
     return null;
 }
@@ -58,7 +61,9 @@ function parseExcelCSVLine(line) {
 function parseStandardCSVLine(line) {
     const matches = line.match(/^"([^"]*)","([^"]*)"$/);
     if (matches && matches.length === 3) {
-        return { weight: matches[1], date: matches[2] };
+        // Convert comma decimal separator to period
+        const weight = matches[1].replace(',', '.');
+        return { weight, date: matches[2] };
     }
     return null;
 }
@@ -86,6 +91,8 @@ function parseCSVLines(lines) {
         try {
             const entry = parseCSVLine(line);
             if (entry) {
+                // Normalize weight to one decimal place
+                entry.weight = parseFloat(entry.weight).toFixed(1);
                 entries.push(entry);
             } else {
                 errorCount++;

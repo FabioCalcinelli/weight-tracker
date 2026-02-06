@@ -53,7 +53,7 @@ function saveWeight() {
     
     const dateInput = document.getElementById('dateInput').value;
     const date = formatDate(dateInput);
-    const weight = weightInput.value.trim();
+    const weight = parseFloat(weightInput.value.trim()).toFixed(1);
     
     saveWeightEntry(date, weight);
     renderHistory();
