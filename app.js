@@ -22,8 +22,20 @@ function saveWeight() {
 
 function renderHistory() {
     const history = JSON.parse(localStorage.getItem('weightData')) || [];
+    
+    history.sort((a, b) => {
+        const dateA = parseDate(a.date);
+        const dateB = parseDate(b.date);
+        return dateB - dateA;
+    });
+    
     const list = document.getElementById('history');
     list.innerHTML = history.map(entry => `<li>${entry.date}: ${entry.weight}kg</li>`).join('');
+}
+
+function parseDate(dateStr) {
+    const [day, month, year] = dateStr.split('-');
+    return new Date(year, month - 1, day);
 }
 
 function clearHistory() {
