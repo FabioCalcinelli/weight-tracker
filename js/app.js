@@ -9,6 +9,7 @@ import {
     clearWeightError
 } from './ui.js';
 import { initializeTabButtons } from './tabs.js';
+import { exportToCSV, importFromCSV } from './csv.js';
 
 let lastSaveTime = 0;
 const SAVE_COOLDOWN = 1500;
@@ -120,13 +121,16 @@ function setupEventListeners() {
     const exportButton = document.getElementById('exportButton');
     if (exportButton) {
         exportButton.addEventListener('click', function() {
-            console.log('Export button clicked - functionality to be implemented');
+            exportToCSV();
         });
     }
     
     if (importFileInput) {
         importFileInput.addEventListener('change', function(e) {
-            console.log('File selected:', e.target.files[0]);
+            const file = e.target.files[0];
+            if (file) {
+                importFromCSV(file, getWeightHistory, saveHistory, renderHistory);
+            }
             // Reset the input so the same file can be selected again if needed
             e.target.value = '';
         });
