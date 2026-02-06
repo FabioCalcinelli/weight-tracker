@@ -19,6 +19,7 @@
         <div class="tab-navigation">
             <button class="tab-button active" data-tab="add-entry">Add Entry</button>
             <button class="tab-button" data-tab="history">History</button>
+            <button class="tab-button" data-tab="import-export">Import Export</button>
         </div>
 
         <div class="tab-content active" id="add-entry">
@@ -44,6 +45,21 @@
             </div>
 
             <button class="clear">Clear All</button>
+        </div>
+
+        <div class="tab-content" id="import-export">
+            <div class="import-export-container">
+                <div class="import-section">
+                    <h3>Import Data</h3>
+                    <input type="file" id="importFileInput" accept=".json" style="display: none;">
+                    <button class="import" id="importButton">Import</button>
+                </div>
+
+                <div class="export-section">
+                    <h3>Export Data</h3>
+                    <button class="export" id="exportButton">Export</button>
+                </div>
+            </div>
         </div>
     </div>
 
