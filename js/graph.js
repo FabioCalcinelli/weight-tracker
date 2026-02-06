@@ -5,6 +5,11 @@ let isDragging = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
 
+let graphOptions = {
+    showDataPoints: true,
+    showDataLine: true
+};
+
 export function renderGraph() {
     const canvas = document.getElementById('weightGraph');
     if (!canvas) return;
@@ -29,8 +34,12 @@ export function renderGraph() {
     ctx.save();
     setClippingRegion(ctx, padding, graphWidth, graphHeight);
     drawGrid(ctx, padding, width, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
-    drawDataLine(ctx, sortedHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
-    drawDataPoints(ctx, sortedHistory, padding, height, graphWidth, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+    if (graphOptions.showDataLine) {
+        drawDataLine(ctx, sortedHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+    }
+    if (graphOptions.showDataPoints) {
+        drawDataPoints(ctx, sortedHistory, padding, height, graphWidth, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+    }
     ctx.restore();
     
     drawAxes(ctx, padding, width, height);
@@ -277,6 +286,25 @@ export function setupGraphInteractions() {
     canvas.addEventListener('touchend', handleTouchEnd);
     
     canvas.style.cursor = 'grab';
+    
+    setupGraphOptions();
+}
+
+function setupGraphOptions() {
+    const showDataPointsCheckbox = document.getElementById('showDataPoints');
+    const showDataLineCheckbox = document.getElementById('showDataLine');
+    
+    if (showDataPointsCheckbox) {
+        showDataPointsCheckbox.addEventListener('change', function() {
+            setGraphOptions({ showDataPoints: this.checked });
+        });
+    }
+    
+    if (showDataLineCheckbox) {
+        showDataLineCheckbox.addEventListener('change', function() {
+            setGraphOptions({ showDataLine: this.checked });
+        });
+    }
 }
 
 function handleWheel(e) {
@@ -399,4 +427,14 @@ function calculateTouchMetrics(touch1, touch2) {
 
 function handleTouchEnd() {
     isDragging = false;
+}
+
+export function setGraphOptions(options) {
+    if (options.showDataPoints !== undefined) {
+        graphOptions.showDataPoints = options.showDataPoints;
+    }
+    if (options.showDataLine !== undefined) {
+        graphOptions.showDataLine = options.showDataLine;
+    }
+    renderGraph();
 }
