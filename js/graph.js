@@ -39,7 +39,7 @@ export function renderGraph() {
 
     ctx.save();
     setClippingRegion(ctx, padding, graphWidth, graphHeight);
-    drawGrid(ctx, padding, width, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+    drawGrid(ctx, padding, width, height, weightMin5, weightRange5, minDate, maxDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
     if (graphOptions.showDataLine) {
         drawDataLine(ctx, filteredHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
     }
@@ -149,15 +149,15 @@ function setClippingRegion(ctx, padding, graphWidth, graphHeight) {
     ctx.clip();
 }
 
-function drawGrid(ctx, padding, width, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight) {
+function drawGrid(ctx, padding, width, height, weightMin5, weightRange5, minDate, maxDate, dateRange, effectiveGraphWidth, effectiveGraphHeight) {
     drawHorizontalGridLines(ctx, padding, width, height, weightMin5, weightRange5, effectiveGraphHeight);
     drawKilogramLines(ctx, padding, width, height, weightMin5, weightRange5, effectiveGraphHeight);
-    drawVerticalGridLines(ctx, padding, height, minDate, dateRange, effectiveGraphWidth);
+    drawVerticalGridLines(ctx, padding, height, minDate, maxDate, dateRange, effectiveGraphWidth);
 }
 
 function drawHorizontalGridLines(ctx, padding, width, height, weightMin5, weightRange5, effectiveGraphHeight) {
-    ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 0.5;
+    ctx.strokeStyle = '#c0c0c0';
+    ctx.lineWidth = 0.8;
     
     const numWeightLines = Math.max(weightRange5 / 5, 1);
     for (let i = 0; i <= numWeightLines; i++) {
@@ -172,8 +172,8 @@ function drawHorizontalGridLines(ctx, padding, width, height, weightMin5, weight
 }
 
 function drawKilogramLines(ctx, padding, width, height, weightMin5, weightRange5, effectiveGraphHeight) {
-    ctx.strokeStyle = '#f0f0f0';
-    ctx.lineWidth = 0.3;
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 0.5;
     
     const numKgLines = Math.max(weightRange5, 1);
     for (let i = 0; i <= numKgLines; i++) {
@@ -187,8 +187,8 @@ function drawKilogramLines(ctx, padding, width, height, weightMin5, weightRange5
     }
 }
 
-function drawVerticalGridLines(ctx, padding, height, minDate, dateRange, effectiveGraphWidth) {
-    const { startDate, endDate } = getDateRange(minDate);
+function drawVerticalGridLines(ctx, padding, height, minDate, maxDate, dateRange, effectiveGraphWidth) {
+    const { startDate, endDate } = getDateRange(minDate, maxDate);
     let currentDate = new Date(startDate);
     
     while (currentDate <= endDate) {
@@ -196,8 +196,8 @@ function drawVerticalGridLines(ctx, padding, height, minDate, dateRange, effecti
         const x = padding.left + ((timeValue - minDate) / dateRange) * effectiveGraphWidth + viewState.panX;
         const isYearBoundary = currentDate.getMonth() === 0;
         
-        ctx.strokeStyle = isYearBoundary ? '#ccc' : '#e8e8e8';
-        ctx.lineWidth = isYearBoundary ? 1 : 0.3;
+        ctx.strokeStyle = isYearBoundary ? '#a0a0a0' : '#d0d0d0';
+        ctx.lineWidth = isYearBoundary ? 1.2 : 0.6;
         
         ctx.beginPath();
         ctx.moveTo(x, padding.top);
@@ -208,11 +208,9 @@ function drawVerticalGridLines(ctx, padding, height, minDate, dateRange, effecti
     }
 }
 
-function getDateRange(minDate) {
+function getDateRange(minDate, maxDate) {
     const minDateObj = new Date(minDate);
-    const maxDateObj = new Date(minDateObj);
-    maxDateObj.setMonth(maxDateObj.getMonth() + 1);
-    maxDateObj.setDate(0);
+    const maxDateObj = new Date(maxDate);
     
     const startDate = new Date(minDateObj.getFullYear(), minDateObj.getMonth(), 1);
     const endDate = new Date(maxDateObj.getFullYear(), maxDateObj.getMonth() + 1, 0);
@@ -403,10 +401,12 @@ function drawYAxisLabels(ctx, padding, height, weightMin5, weightRange5, effecti
 }
 
 function drawXAxisLabels(ctx, padding, height, minDate, maxDate, dateRange, effectiveGraphWidth) {
-    const { startDate, endDate } = getDateRange(minDate);
+    const { startDate, endDate } = getDateRange(minDate, maxDate);
     
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
+    ctx.fillStyle = '#333';
+    ctx.font = '12px sans-serif';
     
     let currentDate = new Date(startDate);
     while (currentDate <= endDate) {
