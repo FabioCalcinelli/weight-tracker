@@ -13,14 +13,17 @@ let graphOptions = {
     showRollingMin: false
 };
 
+let timeRange = 'all';
+
 export function renderGraph() {
     const canvas = document.getElementById('weightGraph');
     if (!canvas) return;
 
     const history = getWeightHistory();
     const sortedHistory = [...history].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const filteredHistory = filterByTimeRange(sortedHistory);
     const { ctx, width, height, padding } = setupCanvas(canvas);
-    const { weights, dates, minWeight, maxWeight, minDate, maxDate, dateRange } = extractData(sortedHistory);
+    const { weights, dates, minWeight, maxWeight, minDate, maxDate, dateRange } = extractData(filteredHistory);
     const { weightMin5, weightMax5, weightRange5 } = calculateWeightRange(minWeight, maxWeight);
     const { graphWidth, graphHeight, effectiveGraphWidth, effectiveGraphHeight } = calculateGraphDimensions(width, height, padding);
     
@@ -29,7 +32,7 @@ export function renderGraph() {
     ctx.clearRect(0, 0, width, height);
     drawBackground(ctx, width, height);
     
-    if (sortedHistory.length === 0) {
+    if (filteredHistory.length === 0) {
         drawNoDataMessage(ctx, width, height);
         return;
     }
@@ -38,19 +41,19 @@ export function renderGraph() {
     setClippingRegion(ctx, padding, graphWidth, graphHeight);
     drawGrid(ctx, padding, width, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
     if (graphOptions.showDataLine) {
-        drawDataLine(ctx, sortedHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+        drawDataLine(ctx, filteredHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
     }
     if (graphOptions.showRollingAverage) {
-        drawRollingAverageLine(ctx, sortedHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+        drawRollingAverageLine(ctx, sortedHistory, filteredHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
     }
     if (graphOptions.showRollingMax) {
-        drawRollingMaxLine(ctx, sortedHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+        drawRollingMaxLine(ctx, sortedHistory, filteredHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
     }
     if (graphOptions.showRollingMin) {
-        drawRollingMinLine(ctx, sortedHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+        drawRollingMinLine(ctx, sortedHistory, filteredHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
     }
     if (graphOptions.showDataPoints) {
-        drawDataPoints(ctx, sortedHistory, padding, height, graphWidth, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+        drawDataPoints(ctx, filteredHistory, padding, height, graphWidth, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
     }
     ctx.restore();
     
@@ -82,6 +85,26 @@ function extractData(sortedHistory) {
     const dateRange = maxDate - minDate || 1;
     
     return { weights, dates, minWeight, maxWeight, minDate, maxDate, dateRange };
+}
+
+function filterByTimeRange(sortedHistory) {
+    if (timeRange === 'all') {
+        return sortedHistory;
+    }
+    
+    const now = new Date();
+    let startDate;
+    
+    if (timeRange === 'year') {
+        startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+    } else if (timeRange === 'month') {
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+    }
+    
+    return sortedHistory.filter(entry => {
+        const entryDate = new Date(entry.date);
+        return entryDate >= startDate && entryDate <= now;
+    });
 }
 
 function calculateWeightRange(minWeight, maxWeight) {
@@ -274,15 +297,20 @@ function calculateRollingStatistics(sortedHistory, windowDays = 10) {
     return rollingStats;
 }
 
-function drawRollingAverageLine(ctx, sortedHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight) {
-    const rollingStats = calculateRollingStatistics(sortedHistory, 10);
+function drawRollingAverageLine(ctx, fullHistory, filteredHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight) {
+    const rollingStats = calculateRollingStatistics(fullHistory, 10);
     if (rollingStats.length <= 1) return;
+    
+    const filteredDates = new Set(filteredHistory.map(entry => entry.date));
+    const filteredRollingStats = rollingStats.filter(stat => filteredDates.has(stat.date));
+    
+    if (filteredRollingStats.length <= 1) return;
     
     ctx.strokeStyle = '#2196F3';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     
-    rollingStats.forEach((stat, index) => {
+    filteredRollingStats.forEach((stat, index) => {
         const entry = { date: stat.date, weight: stat.average };
         const { x, y } = calculateCoordinates(entry, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
         
@@ -296,15 +324,20 @@ function drawRollingAverageLine(ctx, sortedHistory, padding, height, weightMin5,
     ctx.stroke();
 }
 
-function drawRollingMaxLine(ctx, sortedHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight) {
-    const rollingStats = calculateRollingStatistics(sortedHistory, 10);
+function drawRollingMaxLine(ctx, fullHistory, filteredHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight) {
+    const rollingStats = calculateRollingStatistics(fullHistory, 10);
     if (rollingStats.length <= 1) return;
+    
+    const filteredDates = new Set(filteredHistory.map(entry => entry.date));
+    const filteredRollingStats = rollingStats.filter(stat => filteredDates.has(stat.date));
+    
+    if (filteredRollingStats.length <= 1) return;
     
     ctx.strokeStyle = '#F44336';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     
-    rollingStats.forEach((stat, index) => {
+    filteredRollingStats.forEach((stat, index) => {
         const entry = { date: stat.date, weight: stat.max };
         const { x, y } = calculateCoordinates(entry, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
         
@@ -318,15 +351,20 @@ function drawRollingMaxLine(ctx, sortedHistory, padding, height, weightMin5, wei
     ctx.stroke();
 }
 
-function drawRollingMinLine(ctx, sortedHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight) {
-    const rollingStats = calculateRollingStatistics(sortedHistory, 10);
+function drawRollingMinLine(ctx, fullHistory, filteredHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight) {
+    const rollingStats = calculateRollingStatistics(fullHistory, 10);
     if (rollingStats.length <= 1) return;
+    
+    const filteredDates = new Set(filteredHistory.map(entry => entry.date));
+    const filteredRollingStats = rollingStats.filter(stat => filteredDates.has(stat.date));
+    
+    if (filteredRollingStats.length <= 1) return;
     
     ctx.strokeStyle = '#4CAF50';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     
-    rollingStats.forEach((stat, index) => {
+    filteredRollingStats.forEach((stat, index) => {
         const entry = { date: stat.date, weight: stat.min };
         const { x, y } = calculateCoordinates(entry, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
         
@@ -435,6 +473,17 @@ function setupGraphOptions() {
             setGraphOptions({ showRollingMin: this.checked });
         });
     }
+    
+    const timeRangeButtons = document.querySelectorAll('.time-range-button');
+    timeRangeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            timeRangeButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            timeRange = this.dataset.range;
+            viewState = { zoom: 1, panX: 0, panY: 0 };
+            renderGraph();
+        });
+    });
 }
 
 function handleWheel(e) {
@@ -575,5 +624,11 @@ export function setGraphOptions(options) {
     if (options.showRollingMin !== undefined) {
         graphOptions.showRollingMin = options.showRollingMin;
     }
+    renderGraph();
+}
+
+export function setTimeRange(range) {
+    timeRange = range;
+    viewState = { zoom: 1, panX: 0, panY: 0 };
     renderGraph();
 }
