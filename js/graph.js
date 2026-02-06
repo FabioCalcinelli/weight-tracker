@@ -122,7 +122,7 @@ export function renderGraph() {
     }
     
     // Draw axes
-    ctx.strokeStyle = '#666';
+    ctx.strokeStyle = '#333';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(padding.left, padding.top);
@@ -131,7 +131,7 @@ export function renderGraph() {
     ctx.stroke();
     
     // Draw Y-axis labels (weight) - every 5kg
-    ctx.fillStyle = '#666';
+    ctx.fillStyle = '#333';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
@@ -161,7 +161,7 @@ export function renderGraph() {
     // Draw data line
     if (sortedHistory.length > 1) {
         ctx.strokeStyle = '#ff6b35';
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 0.5;
         ctx.beginPath();
         
         sortedHistory.forEach((entry, index) => {
@@ -180,7 +180,7 @@ export function renderGraph() {
         ctx.stroke();
     }
     
-    // Draw data points
+    // Draw data points with black border
     sortedHistory.forEach((entry, index) => {
         const entryDate = new Date(entry.date).getTime();
         const x = sortedHistory.length > 1 
@@ -189,9 +189,17 @@ export function renderGraph() {
         const weight = parseFloat(entry.weight);
         const y = height - padding.bottom - ((weight - weightMin5) / weightRange5) * graphHeight;
         
+        // Draw black border
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.arc(x, y, 1.5, 0, 2 * Math.PI);
+        ctx.stroke();
+        
+        // Draw orange fill
         ctx.fillStyle = '#ff6b35';
         ctx.beginPath();
-        ctx.arc(x, y, 2.5, 0, 2 * Math.PI);
+        ctx.arc(x, y, 1.5, 0, 2 * Math.PI);
         ctx.fill();
     });
 }
