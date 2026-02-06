@@ -18,16 +18,15 @@ export function switchTab(tabId) {
     activateTab(tabId);
     
     if (tabId === 'history') {
-        // Import and call renderHistory from app.js
         import('./app.js').then(module => {
             module.renderHistory();
         });
     }
     
     if (tabId === 'graph') {
-        // Import and call renderGraph from graph.js
         import('./graph.js').then(module => {
             module.renderGraph();
+            module.setupGraphInteractions();
         });
     }
 }
