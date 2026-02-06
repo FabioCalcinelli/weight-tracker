@@ -29,7 +29,7 @@ function renderHistory() {
         return dateB - dateA;
     });
     
-    const list = document.getElementById('history');
+    const list = document.getElementById('historyList');
     
     if (history.length === 0) {
         list.innerHTML = '<div class="empty-state">No weight entries yet. Start tracking!</div>';
@@ -54,6 +54,44 @@ function clearHistory() {
         renderHistory();
     }
 }
+
+// Tab switching functionality
+function switchTab(tabId) {
+    // Remove active class from all tab buttons
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.classList.remove('active');
+    });
+
+    // Remove active class from all tab content panels
+    document.querySelectorAll('.tab-content').forEach(panel => {
+        panel.classList.remove('active');
+    });
+
+    // Add active class to clicked tab button
+    document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+
+    // Add active class to corresponding tab content panel
+    document.getElementById(tabId).classList.add('active');
+
+    // Render history when switching to history tab
+    if (tabId === 'history') {
+        renderHistory();
+    }
+}
+
+// Add event listeners for tab buttons
+document.addEventListener('DOMContentLoaded', function() {
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const tabId = this.getAttribute('data-tab');
+            switchTab(tabId);
+        });
+    });
+
+    // Set default date to today
+    document.getElementById('dateInput').valueAsDate = new Date();
+});
 
 // Load history when app opens
 renderHistory();

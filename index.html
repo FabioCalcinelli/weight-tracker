@@ -16,35 +16,37 @@
     <div class="container">
         <h2>Weight Tracker</h2>
 
-        <div class="input-group">
-            <label for="dateInput">Date</label>
-            <input type="date" id="dateInput">
+        <div class="tab-navigation">
+            <button class="tab-button active" data-tab="add-entry">Add Entry</button>
+            <button class="tab-button" data-tab="history">History</button>
         </div>
 
-        <div class="input-group">
-            <label for="weightInput">Weight (kg)</label>
-            <input type="number" id="weightInput" placeholder="Enter weight" step="0.1">
+        <div class="tab-content active" id="add-entry">
+            <div class="input-group">
+                <label for="dateInput">Date</label>
+                <input type="date" id="dateInput">
+            </div>
+
+            <div class="input-group">
+                <label for="weightInput">Weight (kg)</label>
+                <input type="number" id="weightInput" placeholder="Enter weight" step="0.1">
+            </div>
+
+            <div class="button-group">
+                <button class="save" onclick="saveWeight()">Save</button>
+            </div>
         </div>
 
-        <div class="button-group">
-            <button class="save" onclick="saveWeight()">Save</button>
-        </div>
+        <div class="tab-content" id="history">
+            <div class="history-container">
+                <ul id="historyList"></ul>
+            </div>
 
-        <div class="history-container">
-            <ul id="history"></ul>
+            <button class="clear" onclick="clearHistory()">Clear All</button>
         </div>
-
-        <button class="clear" onclick="clearHistory()">Clear All</button>
     </div>
 
     <script src="app.js"></script>
-
-    <script>
-      // Set default date to today when DOM is loaded
-      document.addEventListener('DOMContentLoaded', function() {
-        document.getElementById('dateInput').valueAsDate = new Date();
-      });
-    </script>
 
     <script>
       if ('serviceWorker' in navigator) {

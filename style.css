@@ -33,6 +33,54 @@ h2 {
     font-weight: 600;
 }
 
+.tab-navigation {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    background: #f0f0f0;
+    padding: 5px;
+    border-radius: 12px;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: transparent;
+    color: #666;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.tab-button:hover {
+    background: rgba(255, 107, 53, 0.1);
+    color: #ff6b35;
+}
+
+.tab-button.active {
+    background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+.tab-content {
+    display: none;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.tab-content.active {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
 .input-group {
     margin-bottom: 20px;
 }
@@ -98,36 +146,31 @@ button.save:active {
 }
 
 button.clear {
-    position: absolute;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 4px 8px;
-    font-size: 10px;
-    font-weight: 400;
+    width: 25%;
+    margin: 20px auto 0;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 500;
     text-transform: none;
     letter-spacing: 0;
-    background: rgba(255, 255, 255, 0.25);
-    color: #888;
-    border: 1px solid rgba(200, 200, 200, 0.5);
-    border-radius: 4px;
-    opacity: 0.6;
+    background: white;
+    color: #d32f2f;
+    border: 2px solid #ffcdd2;
+    border-radius: 12px;
     transition: all 0.3s ease;
-    z-index: 10;
+    display: block;
 }
 
 button.clear:hover {
-    background: rgba(255, 255, 255, 0.4);
-    color: #666;
-    border: 1px solid rgba(200, 200, 200, 0.7);
-    transform: translateX(-50%);
-    box-shadow: none;
-    opacity: 0.9;
+    background: #ffe5e5;
+    color: #d32f2f;
+    border-color: #ffcdd2;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(211, 47, 47, 0.2);
 }
 
 button.clear:active {
-    transform: none;
-    opacity: 1;
+    transform: translateY(0);
 }
 
 .history-container {
@@ -156,11 +199,11 @@ button.clear:active {
     background: #a1a1a1;
 }
 
-#history {
+#historyList {
     list-style: none;
 }
 
-#history li {
+#historyList li {
     background: white;
     padding: 16px 20px;
     margin-bottom: 12px;
@@ -173,12 +216,12 @@ button.clear:active {
     animation: slideIn 0.3s ease;
 }
 
-#history li:hover {
+#historyList li:hover {
     transform: translateX(5px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
-#history li:last-child {
+#historyList li:last-child {
     margin-bottom: 0;
 }
 
@@ -226,6 +269,16 @@ button.clear:active {
         font-size: 24px;
         margin-bottom: 25px;
     }
+
+    .tab-navigation {
+        gap: 5px;
+        padding: 4px;
+    }
+
+    .tab-button {
+        padding: 10px 15px;
+        font-size: 14px;
+    }
     
     .button-group {
         flex-direction: column;
@@ -236,12 +289,7 @@ button.clear:active {
     }
 
     button.clear {
-        bottom: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 3px 6px;
-        font-size: 9px;
-        background: rgba(255, 255, 255, 0.25);
-        border: 1px solid rgba(200, 200, 200, 0.5);
+        padding: 10px 16px;
+        font-size: 13px;
     }
 }
