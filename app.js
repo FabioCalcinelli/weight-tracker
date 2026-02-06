@@ -6,7 +6,23 @@ function getDate(dateInput) {
     return `${day}-${month}-${year}`;
 }
 
+let lastSaveTime = 0;
+const SAVE_COOLDOWN = 1000; // 1 second cooldown
+
 function saveWeight() {
+    const currentTime = Date.now();
+    const timeSinceLastSave = currentTime - lastSaveTime;
+    
+    // Prevent saving if less than 1 second has passed since last save
+    if (timeSinceLastSave < SAVE_COOLDOWN) {
+        return;
+    }
+    
+    lastSaveTime = currentTime;
+    
+    const saveButton = document.querySelector('button.save');
+    saveButton.classList.add('clicked');
+    
     const weight = document.getElementById('weightInput').value;
     const dateInput = document.getElementById('dateInput').value;
     const date = getDate(dateInput);
@@ -18,6 +34,11 @@ function saveWeight() {
     localStorage.setItem('weightData', JSON.stringify(history));
 
     renderHistory();
+    
+    // Remove the clicked class after the cooldown period
+    setTimeout(() => {
+        saveButton.classList.remove('clicked');
+    }, SAVE_COOLDOWN);
 }
 
 function renderHistory() {

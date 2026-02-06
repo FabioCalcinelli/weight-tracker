@@ -145,6 +145,13 @@ button.save:active {
     transform: translateY(0);
 }
 
+button.save.clicked {
+    background: linear-gradient(135deg, #ff4500 0%, #ff6347 100%);
+    transform: scale(0.98);
+    box-shadow: 0 2px 8px rgba(255, 69, 0, 0.5);
+    cursor: not-allowed;
+}
+
 button.clear {
     width: 25%;
     margin: 20px auto 0;
