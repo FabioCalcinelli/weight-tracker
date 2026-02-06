@@ -9,18 +9,32 @@
 
     <link rel="manifest" href="manifest.json">
 
-    <meta name="theme-color" content="#2196F3">
+    <meta name="theme-color" content="#667eea">
 </head>
 <body>
 
-    <h2>Weight Tracker</h2>
+    <div class="container">
+        <h2>Weight Tracker</h2>
 
-    <input type="date" id="dateInput">
-    <input type="number" id="weightInput" placeholder="Enter weight" step="0.1">
-    <button onclick="saveWeight()">Save</button>
-    <button onclick="clearHistory()">Clear All</button>
+        <div class="input-group">
+            <label for="dateInput">Date</label>
+            <input type="date" id="dateInput">
+        </div>
 
-    <ul id="history"></ul>
+        <div class="input-group">
+            <label for="weightInput">Weight (kg)</label>
+            <input type="number" id="weightInput" placeholder="Enter weight" step="0.1">
+        </div>
+
+        <div class="button-group">
+            <button class="save" onclick="saveWeight()">Save</button>
+            <button class="clear" onclick="clearHistory()">Clear All</button>
+        </div>
+
+        <div class="history-container">
+            <ul id="history"></ul>
+        </div>
+    </div>
 
     <script src="app.js"></script>
 

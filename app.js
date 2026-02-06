@@ -30,7 +30,17 @@ function renderHistory() {
     });
     
     const list = document.getElementById('history');
-    list.innerHTML = history.map(entry => `<li>${entry.date}: ${entry.weight}kg</li>`).join('');
+    
+    if (history.length === 0) {
+        list.innerHTML = '<div class="empty-state">No weight entries yet. Start tracking!</div>';
+    } else {
+        list.innerHTML = history.map(entry => `
+            <li>
+                <span class="entry-date">${entry.date}</span>
+                <span class="entry-weight">${entry.weight} kg</span>
+            </li>
+        `).join('');
+    }
 }
 
 function parseDate(dateStr) {
