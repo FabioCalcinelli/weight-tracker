@@ -7,7 +7,10 @@ let lastMouseY = 0;
 
 let graphOptions = {
     showDataPoints: true,
-    showDataLine: true
+    showDataLine: true,
+    showRollingAverage: false,
+    showRollingMax: false,
+    showRollingMin: false
 };
 
 export function renderGraph() {
@@ -36,6 +39,15 @@ export function renderGraph() {
     drawGrid(ctx, padding, width, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
     if (graphOptions.showDataLine) {
         drawDataLine(ctx, sortedHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+    }
+    if (graphOptions.showRollingAverage) {
+        drawRollingAverageLine(ctx, sortedHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+    }
+    if (graphOptions.showRollingMax) {
+        drawRollingMaxLine(ctx, sortedHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+    }
+    if (graphOptions.showRollingMin) {
+        drawRollingMinLine(ctx, sortedHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
     }
     if (graphOptions.showDataPoints) {
         drawDataPoints(ctx, sortedHistory, padding, height, graphWidth, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
@@ -188,7 +200,7 @@ function getDateRange(minDate) {
 function drawDataLine(ctx, sortedHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight) {
     if (sortedHistory.length <= 1) return;
     
-    ctx.strokeStyle = '#ff6b35';
+    ctx.strokeStyle = '#000000';
     ctx.lineWidth = 0.5;
     ctx.beginPath();
     
@@ -212,12 +224,12 @@ function drawDataPoints(ctx, sortedHistory, padding, height, graphWidth, weightM
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 0.5;
         ctx.beginPath();
-        ctx.arc(x, y, 1.5, 0, 2 * Math.PI);
+        ctx.arc(x, y, 0.5, 0, 2 * Math.PI);
         ctx.stroke();
         
-        ctx.fillStyle = '#ff6b35';
+        ctx.fillStyle = '#000';
         ctx.beginPath();
-        ctx.arc(x, y, 1.5, 0, 2 * Math.PI);
+        ctx.arc(x, y, 0.5, 0, 2 * Math.PI);
         ctx.fill();
     });
 }
@@ -229,6 +241,103 @@ function calculateCoordinates(entry, padding, height, weightMin5, weightRange5, 
     const y = height - padding.bottom - ((weight - weightMin5) / weightRange5) * effectiveGraphHeight + viewState.panY;
     
     return { x, y };
+}
+
+function calculateRollingStatistics(sortedHistory, windowDays = 10) {
+    const rollingStats = [];
+    
+    for (let i = 0; i < sortedHistory.length; i++) {
+        const currentDate = new Date(sortedHistory[i].date);
+        const windowStart = new Date(currentDate);
+        windowStart.setDate(windowStart.getDate() - windowDays + 1);
+        
+        const windowEntries = sortedHistory.filter(entry => {
+            const entryDate = new Date(entry.date);
+            return entryDate >= windowStart && entryDate <= currentDate;
+        });
+        
+        if (windowEntries.length > 0) {
+            const weights = windowEntries.map(entry => parseFloat(entry.weight));
+            const average = weights.reduce((sum, w) => sum + w, 0) / weights.length;
+            const max = Math.max(...weights);
+            const min = Math.min(...weights);
+            
+            rollingStats.push({
+                date: sortedHistory[i].date,
+                average: average,
+                max: max,
+                min: min
+            });
+        }
+    }
+    
+    return rollingStats;
+}
+
+function drawRollingAverageLine(ctx, sortedHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight) {
+    const rollingStats = calculateRollingStatistics(sortedHistory, 10);
+    if (rollingStats.length <= 1) return;
+    
+    ctx.strokeStyle = '#2196F3';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    
+    rollingStats.forEach((stat, index) => {
+        const entry = { date: stat.date, weight: stat.average };
+        const { x, y } = calculateCoordinates(entry, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+        
+        if (index === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+    
+    ctx.stroke();
+}
+
+function drawRollingMaxLine(ctx, sortedHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight) {
+    const rollingStats = calculateRollingStatistics(sortedHistory, 10);
+    if (rollingStats.length <= 1) return;
+    
+    ctx.strokeStyle = '#F44336';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    
+    rollingStats.forEach((stat, index) => {
+        const entry = { date: stat.date, weight: stat.max };
+        const { x, y } = calculateCoordinates(entry, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+        
+        if (index === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+    
+    ctx.stroke();
+}
+
+function drawRollingMinLine(ctx, sortedHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight) {
+    const rollingStats = calculateRollingStatistics(sortedHistory, 10);
+    if (rollingStats.length <= 1) return;
+    
+    ctx.strokeStyle = '#4CAF50';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    
+    rollingStats.forEach((stat, index) => {
+        const entry = { date: stat.date, weight: stat.min };
+        const { x, y } = calculateCoordinates(entry, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+        
+        if (index === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+    
+    ctx.stroke();
 }
 
 function drawAxes(ctx, padding, width, height) {
@@ -293,6 +402,9 @@ export function setupGraphInteractions() {
 function setupGraphOptions() {
     const showDataPointsCheckbox = document.getElementById('showDataPoints');
     const showDataLineCheckbox = document.getElementById('showDataLine');
+    const showRollingAverageCheckbox = document.getElementById('showRollingAverage');
+    const showRollingMaxCheckbox = document.getElementById('showRollingMax');
+    const showRollingMinCheckbox = document.getElementById('showRollingMin');
     
     if (showDataPointsCheckbox) {
         showDataPointsCheckbox.addEventListener('change', function() {
@@ -303,6 +415,24 @@ function setupGraphOptions() {
     if (showDataLineCheckbox) {
         showDataLineCheckbox.addEventListener('change', function() {
             setGraphOptions({ showDataLine: this.checked });
+        });
+    }
+    
+    if (showRollingAverageCheckbox) {
+        showRollingAverageCheckbox.addEventListener('change', function() {
+            setGraphOptions({ showRollingAverage: this.checked });
+        });
+    }
+    
+    if (showRollingMaxCheckbox) {
+        showRollingMaxCheckbox.addEventListener('change', function() {
+            setGraphOptions({ showRollingMax: this.checked });
+        });
+    }
+    
+    if (showRollingMinCheckbox) {
+        showRollingMinCheckbox.addEventListener('change', function() {
+            setGraphOptions({ showRollingMin: this.checked });
         });
     }
 }
@@ -435,6 +565,15 @@ export function setGraphOptions(options) {
     }
     if (options.showDataLine !== undefined) {
         graphOptions.showDataLine = options.showDataLine;
+    }
+    if (options.showRollingAverage !== undefined) {
+        graphOptions.showRollingAverage = options.showRollingAverage;
+    }
+    if (options.showRollingMax !== undefined) {
+        graphOptions.showRollingMax = options.showRollingMax;
+    }
+    if (options.showRollingMin !== undefined) {
+        graphOptions.showRollingMin = options.showRollingMin;
     }
     renderGraph();
 }
