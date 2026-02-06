@@ -6,7 +6,7 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
     min-height: 100vh;
     padding: 20px;
     display: flex;
@@ -22,6 +22,7 @@ body {
     max-width: 500px;
     width: 100%;
     margin-top: 40px;
+    position: relative;
 }
 
 h2 {
@@ -58,9 +59,9 @@ input[type="number"] {
 input[type="date"]:focus,
 input[type="number"]:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: #ff6b35;
     background: white;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
 }
 
 .button-group {
@@ -70,7 +71,6 @@ input[type="number"]:focus {
 }
 
 button {
-    flex: 1;
     padding: 14px 24px;
     border: none;
     border-radius: 12px;
@@ -83,13 +83,14 @@ button {
 }
 
 button.save {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    width: 100%;
+    background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
     color: white;
 }
 
 button.save:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 8px 20px rgba(255, 107, 53, 0.4);
 }
 
 button.save:active {
@@ -97,19 +98,36 @@ button.save:active {
 }
 
 button.clear {
-    background: #f8f9fa;
-    color: #dc3545;
-    border: 2px solid #dc3545;
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 8px;
+    font-size: 10px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    background: rgba(255, 255, 255, 0.25);
+    color: #888;
+    border: 1px solid rgba(200, 200, 200, 0.5);
+    border-radius: 4px;
+    opacity: 0.6;
+    transition: all 0.3s ease;
+    z-index: 10;
 }
 
 button.clear:hover {
-    background: #dc3545;
-    color: white;
-    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.4);
+    color: #666;
+    border: 1px solid rgba(200, 200, 200, 0.7);
+    transform: translateX(-50%);
+    box-shadow: none;
+    opacity: 0.9;
 }
 
 button.clear:active {
-    transform: translateY(0);
+    transform: none;
+    opacity: 1;
 }
 
 .history-container {
@@ -171,7 +189,7 @@ button.clear:active {
 }
 
 .entry-weight {
-    color: #667eea;
+    color: #ff6b35;
     font-weight: 700;
     font-size: 18px;
 }
@@ -213,7 +231,17 @@ button.clear:active {
         flex-direction: column;
     }
     
-    button {
+    button.save {
         width: 100%;
+    }
+
+    button.clear {
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 3px 6px;
+        font-size: 9px;
+        background: rgba(255, 255, 255, 0.25);
+        border: 1px solid rgba(200, 200, 200, 0.5);
     }
 }
