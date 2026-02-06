@@ -7,7 +7,7 @@ function getDate(dateInput) {
 }
 
 let lastSaveTime = 0;
-const SAVE_COOLDOWN = 1000; // 1 second cooldown
+const SAVE_COOLDOWN = 2000; // 1 second cooldown
 
 function saveWeight() {
     const currentTime = Date.now();
@@ -55,10 +55,11 @@ function renderHistory() {
     if (history.length === 0) {
         list.innerHTML = '<div class="empty-state">No weight entries yet. Start tracking!</div>';
     } else {
-        list.innerHTML = history.map(entry => `
+        list.innerHTML = history.map((entry, index) => `
             <li>
                 <span class="entry-date">${entry.date}</span>
                 <span class="entry-weight">${entry.weight} kg</span>
+                <button class="delete-entry" onclick="deleteWeight(${index})" title="Delete entry">×</button>
             </li>
         `).join('');
     }
@@ -74,6 +75,26 @@ function clearHistory() {
         localStorage.removeItem('weightData');
         renderHistory();
     }
+}
+
+function deleteWeight(index) {
+    let history = JSON.parse(localStorage.getItem('weightData')) || [];
+    
+    // Sort history to match the display order (newest first)
+    history.sort((a, b) => {
+        const dateA = parseDate(a.date);
+        const dateB = parseDate(b.date);
+        return dateB - dateA;
+    });
+    
+    // Remove the entry at the specified index
+    history.splice(index, 1);
+    
+    // Save the updated history
+    localStorage.setItem('weightData', JSON.stringify(history));
+    
+    // Re-render the history
+    renderHistory();
 }
 
 // Tab switching functionality
