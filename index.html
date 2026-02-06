@@ -19,6 +19,7 @@
         <div class="tab-navigation">
             <button class="tab-button active" data-tab="add-entry">Add Entry</button>
             <button class="tab-button" data-tab="history">History</button>
+            <button class="tab-button" data-tab="graph">Graph</button>
             <button class="tab-button" data-tab="import-export">Import Export</button>
         </div>
 
@@ -45,6 +46,12 @@
             </div>
 
             <button class="clear">Clear All</button>
+        </div>
+
+        <div class="tab-content" id="graph">
+            <div class="graph-container">
+                <canvas id="weightGraph"></canvas>
+            </div>
         </div>
 
         <div class="tab-content" id="import-export">

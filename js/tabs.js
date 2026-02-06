@@ -23,6 +23,13 @@ export function switchTab(tabId) {
             module.renderHistory();
         });
     }
+    
+    if (tabId === 'graph') {
+        // Import and call renderGraph from graph.js
+        import('./graph.js').then(module => {
+            module.renderGraph();
+        });
+    }
 }
 
 export function initializeTabButtons() {

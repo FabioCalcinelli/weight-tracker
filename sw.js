@@ -1,4 +1,4 @@
-const cacheName = 'weight-tracker-v6';
+const cacheName = 'weight-tracker-v7';
 const staticAssets = [
   './',
   './index.html',
@@ -8,6 +8,8 @@ const staticAssets = [
   './js/storage.js',
   './js/ui.js',
   './js/tabs.js',
+  './js/graph.js',
+  './js/csv.js',
   './manifest.json'
 ];
 
