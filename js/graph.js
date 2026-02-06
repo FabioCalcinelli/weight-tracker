@@ -34,15 +34,15 @@ export function renderGraph() {
         return;
     }
     
-    // Calculate min and max weights with some padding
+    // Calculate min and max weights
     const weights = sortedHistory.map(entry => parseFloat(entry.weight));
     const minWeight = Math.min(...weights);
     const maxWeight = Math.max(...weights);
-    const weightRange = maxWeight - minWeight || 1;
-    const weightPadding = weightRange * 0.1;
-    const adjustedMin = minWeight - weightPadding;
-    const adjustedMax = maxWeight + weightPadding;
-    const adjustedRange = adjustedMax - adjustedMin;
+    
+    // Round to nearest 5kg increments
+    const weightMin5 = Math.floor(minWeight / 5) * 5;
+    const weightMax5 = Math.ceil(maxWeight / 5) * 5;
+    const weightRange5 = weightMax5 - weightMin5;
     
     // Calculate time range
     const dates = sortedHistory.map(entry => new Date(entry.date).getTime());
@@ -54,26 +54,71 @@ export function renderGraph() {
     const graphWidth = width - padding.left - padding.right;
     const graphHeight = height - padding.top - padding.bottom;
     
-    // Draw light grid
+    // Draw horizontal grid lines every 5kg
     ctx.strokeStyle = '#e0e0e0';
     ctx.lineWidth = 0.5;
     
-    // Horizontal grid lines (5 lines)
-    for (let i = 0; i <= 5; i++) {
-        const y = padding.top + (i / 5) * graphHeight;
+    const numWeightLines = Math.max(weightRange5 / 5, 1);
+    for (let i = 0; i <= numWeightLines; i++) {
+        const weightValue = weightMin5 + i * 5;
+        const y = height - padding.bottom - ((weightValue - weightMin5) / weightRange5) * graphHeight;
+        
         ctx.beginPath();
         ctx.moveTo(padding.left, y);
         ctx.lineTo(width - padding.right, y);
         ctx.stroke();
     }
     
-    // Vertical grid lines (5 lines)
-    for (let i = 0; i <= 5; i++) {
-        const x = padding.left + (i / 5) * graphWidth;
+    // Draw thin horizontal lines for each kilogram
+    ctx.strokeStyle = '#f0f0f0';
+    ctx.lineWidth = 0.3;
+    
+    const numKgLines = Math.max(weightRange5, 1);
+    for (let i = 0; i <= numKgLines; i++) {
+        const weightValue = weightMin5 + i;
+        const y = height - padding.bottom - ((weightValue - weightMin5) / weightRange5) * graphHeight;
+        
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(width - padding.right, y);
+        ctx.stroke();
+    }
+    
+    // Draw vertical grid lines for months and years
+    const minDateObj = new Date(minDate);
+    const maxDateObj = new Date(maxDate);
+    
+    // Start from the first day of the month containing minDate
+    const startDate = new Date(minDateObj.getFullYear(), minDateObj.getMonth(), 1);
+    // End at the last day of the month containing maxDate
+    const endDate = new Date(maxDateObj.getFullYear(), maxDateObj.getMonth() + 1, 0);
+    
+    // Iterate through each month
+    let currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+        const timeValue = currentDate.getTime();
+        const x = padding.left + ((timeValue - minDate) / dateRange) * graphWidth;
+        
+        // Check if this is a year boundary (January)
+        const isYearBoundary = currentDate.getMonth() === 0;
+        
+        if (isYearBoundary) {
+            // Thicker line for year boundaries
+            ctx.strokeStyle = '#ccc';
+            ctx.lineWidth = 1;
+        } else {
+            // Slimmer line for month boundaries
+            ctx.strokeStyle = '#e8e8e8';
+            ctx.lineWidth = 0.3;
+        }
+        
         ctx.beginPath();
         ctx.moveTo(x, padding.top);
         ctx.lineTo(x, height - padding.bottom);
         ctx.stroke();
+        
+        // Move to next month
+        currentDate.setMonth(currentDate.getMonth() + 1);
     }
     
     // Draw axes
@@ -85,28 +130,32 @@ export function renderGraph() {
     ctx.lineTo(width - padding.right, height - padding.bottom);
     ctx.stroke();
     
-    // Draw Y-axis labels (weight)
+    // Draw Y-axis labels (weight) - every 5kg
     ctx.fillStyle = '#666';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     
-    for (let i = 0; i <= 5; i++) {
-        const y = padding.top + (i / 5) * graphHeight;
-        const weightValue = adjustedMax - (i / 5) * adjustedRange;
-        ctx.fillText(weightValue.toFixed(1) + ' kg', padding.left - 8, y);
+    for (let i = 0; i <= numWeightLines; i++) {
+        const weightValue = weightMin5 + i * 5;
+        const y = height - padding.bottom - ((weightValue - weightMin5) / weightRange5) * graphHeight;
+        ctx.fillText(weightValue.toFixed(0) + ' kg', padding.left - 8, y);
     }
     
-    // Draw X-axis labels (dates) - evenly spaced based on time
+    // Draw X-axis labels (dates) - show years at year boundaries
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     
-    for (let i = 0; i <= 5; i++) {
-        const x = padding.left + (i / 5) * graphWidth;
-        const timeValue = minDate + (i / 5) * dateRange;
-        const date = new Date(timeValue);
-        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        ctx.fillText(dateStr, x, height - padding.bottom + 8);
+    // Show year labels at year boundaries
+    currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+        if (currentDate.getMonth() === 0) {
+            const timeValue = currentDate.getTime();
+            const x = padding.left + ((timeValue - minDate) / dateRange) * graphWidth;
+            const yearStr = currentDate.getFullYear().toString();
+            ctx.fillText(yearStr, x, height - padding.bottom + 8);
+        }
+        currentDate.setMonth(currentDate.getMonth() + 1);
     }
     
     // Draw data line
@@ -119,7 +168,7 @@ export function renderGraph() {
             const entryDate = new Date(entry.date).getTime();
             const x = padding.left + ((entryDate - minDate) / dateRange) * graphWidth;
             const weight = parseFloat(entry.weight);
-            const y = height - padding.bottom - ((weight - adjustedMin) / adjustedRange) * graphHeight;
+            const y = height - padding.bottom - ((weight - weightMin5) / weightRange5) * graphHeight;
             
             if (index === 0) {
                 ctx.moveTo(x, y);
@@ -138,7 +187,7 @@ export function renderGraph() {
             ? padding.left + ((entryDate - minDate) / dateRange) * graphWidth
             : padding.left + graphWidth / 2;
         const weight = parseFloat(entry.weight);
-        const y = height - padding.bottom - ((weight - adjustedMin) / adjustedRange) * graphHeight;
+        const y = height - padding.bottom - ((weight - weightMin5) / weightRange5) * graphHeight;
         
         ctx.fillStyle = '#ff6b35';
         ctx.beginPath();
