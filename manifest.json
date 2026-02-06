@@ -1,5 +1,5 @@
 {
-  "name": "My Weight Tracker",
+  "name": "Weight Tracker",
   "short_name": "Weight",
   "start_url": "index.html",
   "display": "standalone",

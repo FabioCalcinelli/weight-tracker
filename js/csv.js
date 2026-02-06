@@ -1,6 +1,37 @@
 import { getWeightHistory } from './storage.js';
 
-// CSV Export Function
+function generateExportFilename() {
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+    return `weight_measurements_${day}_${month}_${year}.csv`;
+}
+
+function formatCSVRow(entry) {
+    return `"${entry.weight}","=""${entry.date}"""`;
+}
+
+function buildCSVContent(history) {
+    const header = 'Weight (kg),Date (YYYY-MM-DD)\n';
+    const rows = history.map(formatCSVRow).join('\n');
+    return header + rows;
+}
+
+function downloadCSVFile(content, filename) {
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 export function exportToCSV() {
     const history = getWeightHistory();
     
@@ -9,39 +40,95 @@ export function exportToCSV() {
         return;
     }
     
-    // Sort history by date ascending for export (oldest first)
     const sortedHistory = [...history].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const csvContent = buildCSVContent(sortedHistory);
+    const filename = generateExportFilename();
     
-    // Create CSV header
-    let csvContent = 'Weight (kg),Date (YYYY-MM-DD)\n';
-    
-    // Add data rows
-    sortedHistory.forEach(entry => {
-        // Format: "weight","=""date""" (Excel-compatible format)
-        csvContent += `"${entry.weight}","=""${entry.date}"""\n`;
-    });
-    
-    // Create blob and download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    // Generate filename with current date in dd-mm-yyyy format
-    const today = new Date();
-    const day = String(today.getDate()).padStart(2, '0');
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const year = today.getFullYear();
-    const dateStr = `${day}_${month}_${year}`;
-    link.setAttribute('href', url);
-    link.setAttribute('download', `weight_measurements_${dateStr}.csv`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCSVFile(csvContent, filename);
 }
 
-// CSV Import Function
+function parseExcelCSVLine(line) {
+    const matches = line.match(/^"([^"]*)","=""([^"]*)"""/);
+    if (matches && matches.length === 3) {
+        return { weight: matches[1], date: matches[2] };
+    }
+    return null;
+}
+
+function parseStandardCSVLine(line) {
+    const matches = line.match(/^"([^"]*)","([^"]*)"$/);
+    if (matches && matches.length === 3) {
+        return { weight: matches[1], date: matches[2] };
+    }
+    return null;
+}
+
+function isValidEntry(entry) {
+    return entry.weight && entry.date && !isNaN(parseFloat(entry.weight));
+}
+
+function parseCSVLine(line) {
+    let entry = parseExcelCSVLine(line);
+    if (!entry) {
+        entry = parseStandardCSVLine(line);
+    }
+    return entry && isValidEntry(entry) ? entry : null;
+}
+
+function parseCSVLines(lines) {
+    const entries = [];
+    let errorCount = 0;
+    
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        try {
+            const entry = parseCSVLine(line);
+            if (entry) {
+                entries.push(entry);
+            } else {
+                errorCount++;
+            }
+        } catch {
+            errorCount++;
+        }
+    }
+    
+    return { entries, errorCount };
+}
+
+function isDuplicateEntry(existing, imported) {
+    return existing.date === imported.date && existing.weight === imported.weight;
+}
+
+function mergeHistories(existingHistory, importedEntries) {
+    const merged = [...existingHistory];
+    
+    importedEntries.forEach(imported => {
+        const exists = merged.some(existing => isDuplicateEntry(existing, imported));
+        if (!exists) {
+            merged.push(imported);
+        }
+    });
+    
+    return merged;
+}
+
+function handleImportSuccess(importedEntries, errorCount, getWeightHistory, saveHistory, renderHistory) {
+    const confirmMessage = `Found ${importedEntries.length} valid entries${errorCount > 0 ? ` (${errorCount} invalid entries skipped)` : ''}.\n\nDo you want to import these entries? This will merge with existing data.`;
+    
+    if (confirm(confirmMessage)) {
+        const existingHistory = getWeightHistory();
+        const mergedHistory = mergeHistories(existingHistory, importedEntries);
+        
+        saveHistory(mergedHistory);
+        renderHistory();
+        
+        alert(`Successfully imported ${importedEntries.length} entries!`);
+    }
+}
+
 export function importFromCSV(file, getWeightHistory, saveHistory, renderHistory) {
     const reader = new FileReader();
     
@@ -54,81 +141,14 @@ export function importFromCSV(file, getWeightHistory, saveHistory, renderHistory
             return;
         }
         
-        const importedEntries = [];
-        let errorCount = 0;
+        const { entries, errorCount } = parseCSVLines(lines);
         
-        // Skip header row (index 0), start from index 1
-        for (let i = 1; i < lines.length; i++) {
-            const line = lines[i].trim();
-            
-            // Skip empty lines
-            if (!line) continue;
-            
-            try {
-                // Parse CSV line with quotes
-                // Format: "weight","=""date"""
-                const matches = line.match(/^"([^"]*)","=""([^"]*)"""/);
-                
-                if (matches && matches.length === 3) {
-                    const weight = matches[1];
-                    const date = matches[2];
-                    
-                    // Validate weight and date
-                    if (weight && date && !isNaN(parseFloat(weight))) {
-                        importedEntries.push({ date, weight });
-                    } else {
-                        errorCount++;
-                    }
-                } else {
-                    // Try alternative format without Excel-style date formatting
-                    const altMatches = line.match(/^"([^"]*)","([^"]*)"$/);
-                    if (altMatches && altMatches.length === 3) {
-                        const weight = altMatches[1];
-                        const date = altMatches[2];
-                        
-                        if (weight && date && !isNaN(parseFloat(weight))) {
-                            importedEntries.push({ date, weight });
-                        } else {
-                            errorCount++;
-                        }
-                    } else {
-                        errorCount++;
-                    }
-                }
-            } catch (err) {
-                errorCount++;
-            }
-        }
-        
-        if (importedEntries.length === 0) {
+        if (entries.length === 0) {
             alert('No valid entries found in the CSV file.');
             return;
         }
         
-        // Confirm import
-        const confirmMessage = `Found ${importedEntries.length} valid entries${errorCount > 0 ? ` (${errorCount} invalid entries skipped)` : ''}.\n\nDo you want to import these entries? This will merge with existing data.`;
-        
-        if (confirm(confirmMessage)) {
-            // Get existing history
-            const existingHistory = getWeightHistory();
-            
-            // Merge entries, avoiding duplicates (same date and weight)
-            const mergedHistory = [...existingHistory];
-            importedEntries.forEach(imported => {
-                const exists = mergedHistory.some(
-                    existing => existing.date === imported.date && existing.weight === imported.weight
-                );
-                if (!exists) {
-                    mergedHistory.push(imported);
-                }
-            });
-            
-            // Save merged history
-            saveHistory(mergedHistory);
-            renderHistory();
-            
-            alert(`Successfully imported ${importedEntries.length} entries!`);
-        }
+        handleImportSuccess(entries, errorCount, getWeightHistory, saveHistory, renderHistory);
     };
     
     reader.onerror = function() {
