@@ -360,6 +360,31 @@ button.export:active {
     font-size: 14px;
 }
 
+.checkbox-label.data-points span {
+    color: #000000;
+    font-weight: 600;
+}
+
+.checkbox-label.data-line span {
+    color: #000000;
+    font-weight: 600;
+}
+
+.checkbox-label.rolling-average span {
+    color: #2196F3;
+    font-weight: 600;
+}
+
+.checkbox-label.rolling-max span {
+    color: #F44336;
+    font-weight: 600;
+}
+
+.checkbox-label.rolling-min span {
+    color: #4CAF50;
+    font-weight: 600;
+}
+
 .graph-container {
     background: #f8f9fa;
     border-radius: 12px;

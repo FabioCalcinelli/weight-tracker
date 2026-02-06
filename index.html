@@ -50,23 +50,23 @@
 
         <div class="tab-content" id="graph">
             <div class="graph-options">
-                <label class="checkbox-label">
+                <label class="checkbox-label data-points">
                     <input type="checkbox" id="showDataPoints" checked>
                     <span>Data Points</span>
                 </label>
-                <label class="checkbox-label">
+                <label class="checkbox-label data-line">
                     <input type="checkbox" id="showDataLine" checked>
                     <span>Data Line</span>
                 </label>
-                <label class="checkbox-label">
+                <label class="checkbox-label rolling-average">
                     <input type="checkbox" id="showRollingAverage">
                     <span>10-Day Average</span>
                 </label>
-                <label class="checkbox-label">
+                <label class="checkbox-label rolling-max">
                     <input type="checkbox" id="showRollingMax">
                     <span>10-Day Max</span>
                 </label>
-                <label class="checkbox-label">
+                <label class="checkbox-label rolling-min">
                     <input type="checkbox" id="showRollingMin">
                     <span>10-Day Min</span>
                 </label>
@@ -80,8 +80,8 @@
             <div class="import-export-container">
                 <input type="file" id="importFileInput" accept=".csv" style="display: none;">
                 <div class="button-group">
-                    <button class="import" id="importButton">Import</button>
-                    <button class="export" id="exportButton">Export</button>
+                    <button class="import" id="importButton">Import CSV</button>
+                    <button class="export" id="exportButton">Export CSV</button>
                 </div>
             </div>
         </div>
