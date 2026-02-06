@@ -27,6 +27,12 @@ export function renderGraph() {
     const { weightMin5, weightMax5, weightRange5 } = calculateWeightRange(minWeight, maxWeight);
     const { graphWidth, graphHeight, effectiveGraphWidth, effectiveGraphHeight } = calculateGraphDimensions(width, height, padding);
     
+    // Calculate full date range from all history (not filtered)
+    const fullDateRange = calculateFullDateRange(sortedHistory);
+    
+    // Calculate effective zoom based on time range ratio
+    const effectiveZoom = calculateEffectiveZoom(fullDateRange, dateRange);
+    
     clampPanValues(graphWidth, graphHeight, effectiveGraphWidth, effectiveGraphHeight);
     
     ctx.clearRect(0, 0, width, height);
@@ -39,7 +45,7 @@ export function renderGraph() {
 
     ctx.save();
     setClippingRegion(ctx, padding, graphWidth, graphHeight);
-    drawGrid(ctx, padding, width, height, weightMin5, weightRange5, minDate, maxDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+    drawGrid(ctx, padding, width, height, weightMin5, weightRange5, minDate, maxDate, dateRange, effectiveGraphWidth, effectiveGraphHeight, effectiveZoom);
     if (graphOptions.showDataLine) {
         drawDataLine(ctx, filteredHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
     }
@@ -58,8 +64,8 @@ export function renderGraph() {
     ctx.restore();
     
     drawAxes(ctx, padding, width, height);
-    drawYAxisLabels(ctx, padding, height, weightMin5, weightRange5, effectiveGraphHeight);
-    drawXAxisLabels(ctx, padding, height, minDate, maxDate, dateRange, effectiveGraphWidth);
+    drawYAxisLabels(ctx, padding, height, weightMin5, weightRange5, effectiveGraphHeight, effectiveZoom);
+    drawXAxisLabels(ctx, padding, height, minDate, maxDate, dateRange, effectiveGraphWidth, effectiveZoom);
 }
 
 function setupCanvas(canvas) {
@@ -85,6 +91,30 @@ function extractData(sortedHistory) {
     const dateRange = maxDate - minDate || 1;
     
     return { weights, dates, minWeight, maxWeight, minDate, maxDate, dateRange };
+}
+
+function calculateFullDateRange(sortedHistory) {
+    if (sortedHistory.length === 0) return 1;
+    
+    const dates = sortedHistory.map(entry => new Date(entry.date).getTime());
+    const minDate = Math.min(...dates);
+    const maxDate = Math.max(...dates);
+    
+    return maxDate - minDate || 1;
+}
+
+function calculateEffectiveZoom(fullDateRange, filteredDateRange) {
+    // Base zoom from user interaction
+    let effectiveZoom = viewState.zoom;
+    
+    // Calculate the ratio between full date range and filtered date range
+    // This represents how much we're "zooming in" by filtering
+    const zoomRatio = fullDateRange / filteredDateRange;
+    
+    // Apply the zoom ratio to the effective zoom
+    effectiveZoom *= zoomRatio;
+    
+    return effectiveZoom;
 }
 
 function filterByTimeRange(sortedHistory) {
@@ -149,18 +179,18 @@ function setClippingRegion(ctx, padding, graphWidth, graphHeight) {
     ctx.clip();
 }
 
-function drawGrid(ctx, padding, width, height, weightMin5, weightRange5, minDate, maxDate, dateRange, effectiveGraphWidth, effectiveGraphHeight) {
-    drawHorizontalGridLines(ctx, padding, width, height, weightMin5, weightRange5, effectiveGraphHeight);
-    drawKilogramLines(ctx, padding, width, height, weightMin5, weightRange5, effectiveGraphHeight);
-    drawVerticalGridLines(ctx, padding, height, minDate, maxDate, dateRange, effectiveGraphWidth);
+function drawGrid(ctx, padding, width, height, weightMin5, weightRange5, minDate, maxDate, dateRange, effectiveGraphWidth, effectiveGraphHeight, effectiveZoom) {
+    drawHorizontalGridLines(ctx, padding, width, height, weightMin5, weightRange5, effectiveGraphHeight, effectiveZoom);
+    drawVerticalGridLines(ctx, padding, height, minDate, maxDate, dateRange, effectiveGraphWidth, effectiveZoom);
 }
 
-function drawHorizontalGridLines(ctx, padding, width, height, weightMin5, weightRange5, effectiveGraphHeight) {
+function drawHorizontalGridLines(ctx, padding, width, height, weightMin5, weightRange5, effectiveGraphHeight, effectiveZoom) {
+    // Always draw 5kg grid lines (thickest)
     ctx.strokeStyle = '#c0c0c0';
-    ctx.lineWidth = 0.8;
+    ctx.lineWidth = 2.0;
     
-    const numWeightLines = Math.max(weightRange5 / 5, 1);
-    for (let i = 0; i <= numWeightLines; i++) {
+    const num5kgLines = Math.max(weightRange5 / 5, 1);
+    for (let i = 0; i <= num5kgLines; i++) {
         const weightValue = weightMin5 + i * 5;
         const y = height - padding.bottom - ((weightValue - weightMin5) / weightRange5) * effectiveGraphHeight + viewState.panY;
         
@@ -169,42 +199,134 @@ function drawHorizontalGridLines(ctx, padding, width, height, weightMin5, weight
         ctx.lineTo(width - padding.right, y);
         ctx.stroke();
     }
-}
-
-function drawKilogramLines(ctx, padding, width, height, weightMin5, weightRange5, effectiveGraphHeight) {
-    ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 0.5;
     
-    const numKgLines = Math.max(weightRange5, 1);
-    for (let i = 0; i <= numKgLines; i++) {
-        const weightValue = weightMin5 + i;
-        const y = height - padding.bottom - ((weightValue - weightMin5) / weightRange5) * effectiveGraphHeight + viewState.panY;
+    // Draw 1kg grid lines when zoom >= 4 (medium thickness)
+    if (effectiveZoom >= 4) {
+        ctx.strokeStyle = '#c0c0c0';
+        ctx.lineWidth = 1.0;
         
-        ctx.beginPath();
-        ctx.moveTo(padding.left, y);
-        ctx.lineTo(width - padding.right, y);
-        ctx.stroke();
+        const num1kgLines = Math.max(weightRange5 / 1, 1);
+        for (let i = 0; i <= num1kgLines; i++) {
+            const weightValue = weightMin5 + i * 1;
+            // Skip if this is a 5kg line (already drawn)
+            if (weightValue % 5 !== 0) {
+                const y = height - padding.bottom - ((weightValue - weightMin5) / weightRange5) * effectiveGraphHeight + viewState.panY;
+                
+                ctx.beginPath();
+                ctx.moveTo(padding.left, y);
+                ctx.lineTo(width - padding.right, y);
+                ctx.stroke();
+            }
+        }
+    }
+    
+    // Draw 0.2kg grid lines when zoom >= 60 (thinnest)
+    if (effectiveZoom >= 60) {
+        ctx.strokeStyle = '#c0c0c0';
+        ctx.lineWidth = 0.5;
+        
+        const num02kgLines = Math.max(weightRange5 / 0.2, 1);
+        for (let i = 0; i <= num02kgLines; i++) {
+            const weightValue = weightMin5 + i * 0.2;
+            // Skip if this is a 1kg or 5kg line (already drawn)
+            if (Math.abs(weightValue % 1) > 0.01) {
+                const y = height - padding.bottom - ((weightValue - weightMin5) / weightRange5) * effectiveGraphHeight + viewState.panY;
+                
+                ctx.beginPath();
+                ctx.moveTo(padding.left, y);
+                ctx.lineTo(width - padding.right, y);
+                ctx.stroke();
+            }
+        }
     }
 }
 
-function drawVerticalGridLines(ctx, padding, height, minDate, maxDate, dateRange, effectiveGraphWidth) {
+function drawVerticalGridLines(ctx, padding, height, minDate, maxDate, dateRange, effectiveGraphWidth, effectiveZoom) {
     const { startDate, endDate } = getDateRange(minDate, maxDate);
+    
+    // Always draw year grid lines (thickest)
+    drawYearGridLines(ctx, padding, height, startDate, endDate, minDate, dateRange, effectiveGraphWidth);
+    
+    // Draw month grid lines when zoom >= 4 (medium thickness)
+    if (effectiveZoom >= 4) {
+        drawMonthGridLines(ctx, padding, height, startDate, endDate, minDate, dateRange, effectiveGraphWidth);
+    }
+    
+    // Draw Monday grid lines when zoom >= 25 (thinnest)
+    if (effectiveZoom >= 25) {
+        drawMondayGridLines(ctx, padding, height, startDate, endDate, minDate, dateRange, effectiveGraphWidth);
+    }
+}
+
+function drawYearGridLines(ctx, padding, height, startDate, endDate, minDate, dateRange, effectiveGraphWidth) {
     let currentDate = new Date(startDate);
+    currentDate.setMonth(0, 1); // Start from January 1st
     
     while (currentDate <= endDate) {
         const timeValue = currentDate.getTime();
         const x = padding.left + ((timeValue - minDate) / dateRange) * effectiveGraphWidth + viewState.panX;
-        const isYearBoundary = currentDate.getMonth() === 0;
         
-        ctx.strokeStyle = isYearBoundary ? '#a0a0a0' : '#d0d0d0';
-        ctx.lineWidth = isYearBoundary ? 1.2 : 0.6;
+        ctx.strokeStyle = '#a0a0a0';
+        ctx.lineWidth = 2.0;
         
         ctx.beginPath();
         ctx.moveTo(x, padding.top);
         ctx.lineTo(x, height - padding.bottom);
         ctx.stroke();
         
+        currentDate.setFullYear(currentDate.getFullYear() + 1);
+    }
+}
+
+function drawMonthGridLines(ctx, padding, height, startDate, endDate, minDate, dateRange, effectiveGraphWidth) {
+    let currentDate = new Date(startDate);
+    currentDate.setDate(1); // Start from 1st of month
+    
+    while (currentDate <= endDate) {
+        const timeValue = currentDate.getTime();
+        const x = padding.left + ((timeValue - minDate) / dateRange) * effectiveGraphWidth + viewState.panX;
+        const isYearBoundary = currentDate.getMonth() === 0;
+        
+        // Skip year boundaries (already drawn by year grid lines)
+        if (!isYearBoundary) {
+            ctx.strokeStyle = '#d0d0d0';
+            ctx.lineWidth = 1.0;
+            
+            ctx.beginPath();
+            ctx.moveTo(x, padding.top);
+            ctx.lineTo(x, height - padding.bottom);
+            ctx.stroke();
+        }
+        
         currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+}
+
+function drawMondayGridLines(ctx, padding, height, startDate, endDate, minDate, dateRange, effectiveGraphWidth) {
+    let currentDate = new Date(startDate);
+    
+    // Find first Monday
+    while (currentDate.getDay() !== 1) {
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    while (currentDate <= endDate) {
+        const timeValue = currentDate.getTime();
+        const x = padding.left + ((timeValue - minDate) / dateRange) * effectiveGraphWidth + viewState.panX;
+        const isMonthBoundary = currentDate.getDate() === 1;
+        
+        // Skip month boundaries (already drawn by month grid lines)
+        if (!isMonthBoundary) {
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 0.5;
+            
+            ctx.beginPath();
+            ctx.moveTo(x, padding.top);
+            ctx.lineTo(x, height - padding.bottom);
+            ctx.stroke();
+        }
+        
+        currentDate.setDate(currentDate.getDate() + 7);
     }
 }
 
@@ -386,21 +508,38 @@ function drawAxes(ctx, padding, width, height) {
     ctx.stroke();
 }
 
-function drawYAxisLabels(ctx, padding, height, weightMin5, weightRange5, effectiveGraphHeight) {
+function drawYAxisLabels(ctx, padding, height, weightMin5, weightRange5, effectiveGraphHeight, effectiveZoom) {
     ctx.fillStyle = '#333';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     
-    const numWeightLines = Math.max(weightRange5 / 5, 1);
+    // Determine grid interval and decimal places based on zoom level
+    let gridInterval, decimalPlaces;
+    if (effectiveZoom >= 60) {
+        gridInterval = 0.2;
+        decimalPlaces = 1;
+    } else if (effectiveZoom >= 4) {
+        gridInterval = 1;
+        decimalPlaces = 0;
+    } else {
+        gridInterval = 5;
+        decimalPlaces = 0;
+    }
+    
+    const numWeightLines = Math.max(weightRange5 / gridInterval, 1);
     for (let i = 0; i <= numWeightLines; i++) {
-        const weightValue = weightMin5 + i * 5;
+        const weightValue = weightMin5 + i * gridInterval;
         const y = height - padding.bottom - ((weightValue - weightMin5) / weightRange5) * effectiveGraphHeight + viewState.panY;
-        ctx.fillText(weightValue.toFixed(0) + ' kg', padding.left - 8, y);
+        
+        // Only draw labels within the visible graph area (above x-axis)
+        if (y >= padding.top && y <= height - padding.bottom) {
+            ctx.fillText(weightValue.toFixed(decimalPlaces) + ' kg', padding.left - 8, y);
+        }
     }
 }
 
-function drawXAxisLabels(ctx, padding, height, minDate, maxDate, dateRange, effectiveGraphWidth) {
+function drawXAxisLabels(ctx, padding, height, minDate, maxDate, dateRange, effectiveGraphWidth, effectiveZoom) {
     const { startDate, endDate } = getDateRange(minDate, maxDate);
     
     ctx.textAlign = 'center';
@@ -408,14 +547,77 @@ function drawXAxisLabels(ctx, padding, height, minDate, maxDate, dateRange, effe
     ctx.fillStyle = '#333';
     ctx.font = '12px sans-serif';
     
+    // Determine label format based on zoom level
+    if (effectiveZoom >= 25) {
+        // High zoom: Show dates (Mondays)
+        drawMondayLabels(ctx, padding, height, startDate, endDate, minDate, dateRange, effectiveGraphWidth);
+    } else if (effectiveZoom >= 4) {
+        // Medium zoom: Show months
+        drawMonthLabels(ctx, padding, height, startDate, endDate, minDate, dateRange, effectiveGraphWidth);
+    } else {
+        // Low zoom: Show years
+        drawYearLabels(ctx, padding, height, startDate, endDate, minDate, dateRange, effectiveGraphWidth);
+    }
+}
+
+function drawYearLabels(ctx, padding, height, startDate, endDate, minDate, dateRange, effectiveGraphWidth) {
     let currentDate = new Date(startDate);
+    currentDate.setMonth(0, 1); // Start from January 1st
+    
     while (currentDate <= endDate) {
-        if (currentDate.getMonth() === 0) {
-            const timeValue = currentDate.getTime();
-            const x = padding.left + ((timeValue - minDate) / dateRange) * effectiveGraphWidth + viewState.panX;
+        const timeValue = currentDate.getTime();
+        const x = padding.left + ((timeValue - minDate) / dateRange) * effectiveGraphWidth + viewState.panX;
+        
+        // Only draw labels within the visible graph area (right of Y-axis)
+        if (x >= padding.left) {
             ctx.fillText(currentDate.getFullYear().toString(), x, height - padding.bottom + 8);
         }
+        currentDate.setFullYear(currentDate.getFullYear() + 1);
+    }
+}
+
+function drawMonthLabels(ctx, padding, height, startDate, endDate, minDate, dateRange, effectiveGraphWidth) {
+    let currentDate = new Date(startDate);
+    currentDate.setDate(1); // Start from 1st of month
+    
+    while (currentDate <= endDate) {
+        const timeValue = currentDate.getTime();
+        const x = padding.left + ((timeValue - minDate) / dateRange) * effectiveGraphWidth + viewState.panX;
+        
+        // Only draw labels within the visible graph area (right of Y-axis)
+        if (x >= padding.left) {
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const label = currentDate.getMonth() === 0 
+                ? currentDate.getFullYear().toString() 
+                : monthNames[currentDate.getMonth()];
+            
+            ctx.fillText(label, x, height - padding.bottom + 8);
+        }
         currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+}
+
+function drawMondayLabels(ctx, padding, height, startDate, endDate, minDate, dateRange, effectiveGraphWidth) {
+    let currentDate = new Date(startDate);
+    
+    // Find first Monday
+    while (currentDate.getDay() !== 1) {
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    while (currentDate <= endDate) {
+        const timeValue = currentDate.getTime();
+        const x = padding.left + ((timeValue - minDate) / dateRange) * effectiveGraphWidth + viewState.panX;
+        
+        // Only draw labels within the visible graph area (right of Y-axis)
+        if (x >= padding.left) {
+            const day = currentDate.getDate();
+            const month = currentDate.getMonth() + 1;
+            const label = `${day}/${month}`;
+            
+            ctx.fillText(label, x, height - padding.bottom + 8);
+        }
+        currentDate.setDate(currentDate.getDate() + 7);
     }
 }
 
