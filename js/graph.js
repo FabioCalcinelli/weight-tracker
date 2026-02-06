@@ -1,13 +1,6 @@
 import { getWeightHistory } from './storage.js';
 
-// View state for zoom and pan
-let viewState = {
-    zoom: 1,
-    panX: 0,
-    panY: 0
-};
-
-// Mouse/touch state for dragging
+let viewState = { zoom: 1, panX: 0, panY: 0 };
 let isDragging = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
@@ -15,13 +8,37 @@ let lastMouseY = 0;
 export function renderGraph() {
     const canvas = document.getElementById('weightGraph');
     if (!canvas) return;
-    
+
     const history = getWeightHistory();
-    
-    // Sort history by date ascending for the graph
     const sortedHistory = [...history].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const { ctx, width, height, padding } = setupCanvas(canvas);
+    const { weights, dates, minWeight, maxWeight, minDate, maxDate, dateRange } = extractData(sortedHistory);
+    const { weightMin5, weightMax5, weightRange5 } = calculateWeightRange(minWeight, maxWeight);
+    const { graphWidth, graphHeight, effectiveGraphWidth, effectiveGraphHeight } = calculateGraphDimensions(width, height, padding);
     
-    // Set canvas size
+    clampPanValues(graphWidth, graphHeight, effectiveGraphWidth, effectiveGraphHeight);
+    
+    ctx.clearRect(0, 0, width, height);
+    drawBackground(ctx, width, height);
+    
+    if (sortedHistory.length === 0) {
+        drawNoDataMessage(ctx, width, height);
+        return;
+    }
+
+    ctx.save();
+    setClippingRegion(ctx, padding, graphWidth, graphHeight);
+    drawGrid(ctx, padding, width, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+    drawDataLine(ctx, sortedHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+    drawDataPoints(ctx, sortedHistory, padding, height, graphWidth, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+    ctx.restore();
+    
+    drawAxes(ctx, padding, width, height);
+    drawYAxisLabels(ctx, padding, height, weightMin5, weightRange5, effectiveGraphHeight);
+    drawXAxisLabels(ctx, padding, height, minDate, maxDate, dateRange, effectiveGraphWidth);
+}
+
+function setupCanvas(canvas) {
     const container = canvas.parentElement;
     canvas.width = container.clientWidth;
     canvas.height = 300;
@@ -31,58 +48,70 @@ export function renderGraph() {
     const height = canvas.height;
     const padding = { top: 30, right: 30, bottom: 50, left: 60 };
     
-    // Clear canvas
-    ctx.clearRect(0, 0, width, height);
-    
-    // Draw background
-    ctx.fillStyle = '#f8f9fa';
-    ctx.fillRect(0, 0, width, height);
-    
-    if (sortedHistory.length === 0) {
-        ctx.fillStyle = '#999';
-        ctx.font = '16px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('No data to display', width / 2, height / 2);
-        return;
-    }
-    
-    // Calculate min and max weights
+    return { ctx, width, height, padding };
+}
+
+function extractData(sortedHistory) {
     const weights = sortedHistory.map(entry => parseFloat(entry.weight));
+    const dates = sortedHistory.map(entry => new Date(entry.date).getTime());
     const minWeight = Math.min(...weights);
     const maxWeight = Math.max(...weights);
-    
-    // Round to nearest 5kg increments
-    const weightMin5 = Math.floor(minWeight / 5) * 5;
-    const weightMax5 = Math.ceil(maxWeight / 5) * 5;
-    const weightRange5 = weightMax5 - weightMin5;
-    
-    // Calculate time range
-    const dates = sortedHistory.map(entry => new Date(entry.date).getTime());
     const minDate = Math.min(...dates);
     const maxDate = Math.max(...dates);
     const dateRange = maxDate - minDate || 1;
     
-    // Calculate graph area
+    return { weights, dates, minWeight, maxWeight, minDate, maxDate, dateRange };
+}
+
+function calculateWeightRange(minWeight, maxWeight) {
+    const weightMin5 = Math.floor(minWeight / 5) * 5;
+    const weightMax5 = Math.ceil(maxWeight / 5) * 5;
+    const weightRange5 = weightMax5 - weightMin5;
+    
+    return { weightMin5, weightMax5, weightRange5 };
+}
+
+function calculateGraphDimensions(width, height, padding) {
     const graphWidth = width - padding.left - padding.right;
     const graphHeight = height - padding.top - padding.bottom;
-    
-    // Apply zoom and pan
     const effectiveGraphWidth = graphWidth * viewState.zoom;
     const effectiveGraphHeight = graphHeight * viewState.zoom;
     
-    // Clamp pan values
+    return { graphWidth, graphHeight, effectiveGraphWidth, effectiveGraphHeight };
+}
+
+function clampPanValues(graphWidth, graphHeight, effectiveGraphWidth, effectiveGraphHeight) {
     const maxPanX = Math.max(0, effectiveGraphWidth - graphWidth);
     const maxPanY = Math.max(0, effectiveGraphHeight - graphHeight);
     viewState.panX = Math.max(-maxPanX, Math.min(maxPanX, viewState.panX));
     viewState.panY = Math.max(-maxPanY, Math.min(maxPanY, viewState.panY));
-    
-    // Save context and set clipping region
-    ctx.save();
+}
+
+function drawBackground(ctx, width, height) {
+    ctx.fillStyle = '#f8f9fa';
+    ctx.fillRect(0, 0, width, height);
+}
+
+function drawNoDataMessage(ctx, width, height) {
+    ctx.fillStyle = '#999';
+    ctx.font = '16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No data to display', width / 2, height / 2);
+}
+
+function setClippingRegion(ctx, padding, graphWidth, graphHeight) {
     ctx.beginPath();
     ctx.rect(padding.left, padding.top, graphWidth, graphHeight);
     ctx.clip();
-    
-    // Draw horizontal grid lines every 5kg
+}
+
+function drawGrid(ctx, padding, width, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight) {
+    drawHorizontalGridLines(ctx, padding, width, height, weightMin5, weightRange5, effectiveGraphHeight);
+    drawKilogramLines(ctx, padding, width, height, weightMin5, weightRange5, effectiveGraphHeight);
+    drawVerticalGridLines(ctx, padding, height, minDate, dateRange, effectiveGraphWidth);
+}
+
+function drawHorizontalGridLines(ctx, padding, width, height, weightMin5, weightRange5, effectiveGraphHeight) {
     ctx.strokeStyle = '#e0e0e0';
     ctx.lineWidth = 0.5;
     
@@ -96,8 +125,9 @@ export function renderGraph() {
         ctx.lineTo(width - padding.right, y);
         ctx.stroke();
     }
-    
-    // Draw thin horizontal lines for each kilogram
+}
+
+function drawKilogramLines(ctx, padding, width, height, weightMin5, weightRange5, effectiveGraphHeight) {
     ctx.strokeStyle = '#f0f0f0';
     ctx.lineWidth = 0.3;
     
@@ -111,93 +141,88 @@ export function renderGraph() {
         ctx.lineTo(width - padding.right, y);
         ctx.stroke();
     }
-    
-    // Draw vertical grid lines for months and years
-    const minDateObj = new Date(minDate);
-    const maxDateObj = new Date(maxDate);
-    
-    // Start from the first day of the month containing minDate
-    const startDate = new Date(minDateObj.getFullYear(), minDateObj.getMonth(), 1);
-    // End at the last day of the month containing maxDate
-    const endDate = new Date(maxDateObj.getFullYear(), maxDateObj.getMonth() + 1, 0);
-    
-    // Iterate through each month
+}
+
+function drawVerticalGridLines(ctx, padding, height, minDate, dateRange, effectiveGraphWidth) {
+    const { startDate, endDate } = getDateRange(minDate);
     let currentDate = new Date(startDate);
+    
     while (currentDate <= endDate) {
         const timeValue = currentDate.getTime();
         const x = padding.left + ((timeValue - minDate) / dateRange) * effectiveGraphWidth + viewState.panX;
-        
-        // Check if this is a year boundary (January)
         const isYearBoundary = currentDate.getMonth() === 0;
         
-        if (isYearBoundary) {
-            // Thicker line for year boundaries
-            ctx.strokeStyle = '#ccc';
-            ctx.lineWidth = 1;
-        } else {
-            // Slimmer line for month boundaries
-            ctx.strokeStyle = '#e8e8e8';
-            ctx.lineWidth = 0.3;
-        }
+        ctx.strokeStyle = isYearBoundary ? '#ccc' : '#e8e8e8';
+        ctx.lineWidth = isYearBoundary ? 1 : 0.3;
         
         ctx.beginPath();
         ctx.moveTo(x, padding.top);
         ctx.lineTo(x, height - padding.bottom);
         ctx.stroke();
         
-        // Move to next month
         currentDate.setMonth(currentDate.getMonth() + 1);
     }
+}
+
+function getDateRange(minDate) {
+    const minDateObj = new Date(minDate);
+    const maxDateObj = new Date(minDateObj);
+    maxDateObj.setMonth(maxDateObj.getMonth() + 1);
+    maxDateObj.setDate(0);
     
-    // Draw data line
-    if (sortedHistory.length > 1) {
-        ctx.strokeStyle = '#ff6b35';
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        
-        sortedHistory.forEach((entry, index) => {
-            const entryDate = new Date(entry.date).getTime();
-            const x = padding.left + ((entryDate - minDate) / dateRange) * effectiveGraphWidth + viewState.panX;
-            const weight = parseFloat(entry.weight);
-            const y = height - padding.bottom - ((weight - weightMin5) / weightRange5) * effectiveGraphHeight + viewState.panY;
-            
-            if (index === 0) {
-                ctx.moveTo(x, y);
-            } else {
-                ctx.lineTo(x, y);
-            }
-        });
-        
-        ctx.stroke();
-    }
+    const startDate = new Date(minDateObj.getFullYear(), minDateObj.getMonth(), 1);
+    const endDate = new Date(maxDateObj.getFullYear(), maxDateObj.getMonth() + 1, 0);
     
-    // Draw data points with black border
+    return { startDate, endDate };
+}
+
+function drawDataLine(ctx, sortedHistory, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight) {
+    if (sortedHistory.length <= 1) return;
+    
+    ctx.strokeStyle = '#ff6b35';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    
     sortedHistory.forEach((entry, index) => {
-        const entryDate = new Date(entry.date).getTime();
-        const x = sortedHistory.length > 1 
-            ? padding.left + ((entryDate - minDate) / dateRange) * effectiveGraphWidth + viewState.panX
-            : padding.left + graphWidth / 2;
-        const weight = parseFloat(entry.weight);
-        const y = height - padding.bottom - ((weight - weightMin5) / weightRange5) * effectiveGraphHeight + viewState.panY;
+        const { x, y } = calculateCoordinates(entry, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
         
-        // Draw black border
+        if (index === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+    
+    ctx.stroke();
+}
+
+function drawDataPoints(ctx, sortedHistory, padding, height, graphWidth, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight) {
+    sortedHistory.forEach(entry => {
+        const { x, y } = calculateCoordinates(entry, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight);
+        
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 0.5;
         ctx.beginPath();
         ctx.arc(x, y, 1.5, 0, 2 * Math.PI);
         ctx.stroke();
         
-        // Draw orange fill
         ctx.fillStyle = '#ff6b35';
         ctx.beginPath();
         ctx.arc(x, y, 1.5, 0, 2 * Math.PI);
         ctx.fill();
     });
+}
+
+function calculateCoordinates(entry, padding, height, weightMin5, weightRange5, minDate, dateRange, effectiveGraphWidth, effectiveGraphHeight) {
+    const entryDate = new Date(entry.date).getTime();
+    const x = padding.left + ((entryDate - minDate) / dateRange) * effectiveGraphWidth + viewState.panX;
+    const weight = parseFloat(entry.weight);
+    const y = height - padding.bottom - ((weight - weightMin5) / weightRange5) * effectiveGraphHeight + viewState.panY;
     
-    // Restore context to remove clipping for axes and labels
-    ctx.restore();
-    
-    // Draw axes
+    return { x, y };
+}
+
+function drawAxes(ctx, padding, width, height) {
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -205,161 +230,173 @@ export function renderGraph() {
     ctx.lineTo(padding.left, height - padding.bottom);
     ctx.lineTo(width - padding.right, height - padding.bottom);
     ctx.stroke();
-    
-    // Draw Y-axis labels (weight) - every 5kg
+}
+
+function drawYAxisLabels(ctx, padding, height, weightMin5, weightRange5, effectiveGraphHeight) {
     ctx.fillStyle = '#333';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     
+    const numWeightLines = Math.max(weightRange5 / 5, 1);
     for (let i = 0; i <= numWeightLines; i++) {
         const weightValue = weightMin5 + i * 5;
         const y = height - padding.bottom - ((weightValue - weightMin5) / weightRange5) * effectiveGraphHeight + viewState.panY;
         ctx.fillText(weightValue.toFixed(0) + ' kg', padding.left - 8, y);
     }
+}
+
+function drawXAxisLabels(ctx, padding, height, minDate, maxDate, dateRange, effectiveGraphWidth) {
+    const { startDate, endDate } = getDateRange(minDate);
     
-    // Draw X-axis labels (dates) - show years at year boundaries
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     
-    // Show year labels at year boundaries
-    currentDate = new Date(startDate);
+    let currentDate = new Date(startDate);
     while (currentDate <= endDate) {
         if (currentDate.getMonth() === 0) {
             const timeValue = currentDate.getTime();
             const x = padding.left + ((timeValue - minDate) / dateRange) * effectiveGraphWidth + viewState.panX;
-            const yearStr = currentDate.getFullYear().toString();
-            ctx.fillText(yearStr, x, height - padding.bottom + 8);
+            ctx.fillText(currentDate.getFullYear().toString(), x, height - padding.bottom + 8);
         }
         currentDate.setMonth(currentDate.getMonth() + 1);
     }
 }
 
-// Setup zoom and pan event listeners
 export function setupGraphInteractions() {
     const canvas = document.getElementById('weightGraph');
     if (!canvas) return;
     
-    // Mouse wheel zoom
-    canvas.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        
-        const rect = canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-        
-        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-        const newZoom = Math.max(1, Math.min(10, viewState.zoom * zoomFactor));
-        
-        // Zoom towards mouse position
-        const zoomRatio = newZoom / viewState.zoom;
-        viewState.panX = mouseX - (mouseX - viewState.panX) * zoomRatio;
-        viewState.panY = mouseY - (mouseY - viewState.panY) * zoomRatio;
-        viewState.zoom = newZoom;
-        
-        renderGraph();
-    });
+    canvas.addEventListener('wheel', handleWheel);
+    canvas.addEventListener('mousedown', handleMouseDown);
+    canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('mouseup', handleMouseUp);
+    canvas.addEventListener('mouseleave', handleMouseLeave);
+    canvas.addEventListener('touchstart', handleTouchStart);
+    canvas.addEventListener('touchmove', handleTouchMove);
+    canvas.addEventListener('touchend', handleTouchEnd);
     
-    // Mouse drag for panning
-    canvas.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        lastMouseX = e.clientX;
-        lastMouseY = e.clientY;
-        canvas.style.cursor = 'grabbing';
-    });
-    
-    canvas.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        
-        const deltaX = e.clientX - lastMouseX;
-        const deltaY = e.clientY - lastMouseY;
-        
-        viewState.panX += deltaX;
-        viewState.panY += deltaY;
-        
-        lastMouseX = e.clientX;
-        lastMouseY = e.clientY;
-        
-        renderGraph();
-    });
-    
-    canvas.addEventListener('mouseup', () => {
-        isDragging = false;
-        canvas.style.cursor = 'grab';
-    });
-    
-    canvas.addEventListener('mouseleave', () => {
-        isDragging = false;
-        canvas.style.cursor = 'grab';
-    });
-    
-    // Touch support for mobile
-    let lastTouchDistance = 0;
-    let lastTouchCenterX = 0;
-    let lastTouchCenterY = 0;
-    
-    canvas.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 1) {
-            isDragging = true;
-            lastMouseX = e.touches[0].clientX;
-            lastMouseY = e.touches[0].clientY;
-        } else if (e.touches.length === 2) {
-            isDragging = false;
-            const touch1 = e.touches[0];
-            const touch2 = e.touches[1];
-            lastTouchDistance = Math.hypot(
-                touch2.clientX - touch1.clientX,
-                touch2.clientY - touch1.clientY
-            );
-            lastTouchCenterX = (touch1.clientX + touch2.clientX) / 2;
-            lastTouchCenterY = (touch1.clientY + touch2.clientY) / 2;
-        }
-    });
-    
-    canvas.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        
-        if (e.touches.length === 1 && isDragging) {
-            const deltaX = e.touches[0].clientX - lastMouseX;
-            const deltaY = e.touches[0].clientY - lastMouseY;
-            
-            viewState.panX += deltaX;
-            viewState.panY += deltaY;
-            
-            lastMouseX = e.touches[0].clientX;
-            lastMouseY = e.touches[0].clientY;
-            
-            renderGraph();
-        } else if (e.touches.length === 2) {
-            const touch1 = e.touches[0];
-            const touch2 = e.touches[1];
-            const currentDistance = Math.hypot(
-                touch2.clientX - touch1.clientX,
-                touch2.clientY - touch1.clientY
-            );
-            const currentCenterX = (touch1.clientX + touch2.clientX) / 2;
-            const currentCenterY = (touch1.clientY + touch2.clientY) / 2;
-            
-            const zoomFactor = currentDistance / lastTouchDistance;
-            const newZoom = Math.max(1, Math.min(10, viewState.zoom * zoomFactor));
-            
-            const zoomRatio = newZoom / viewState.zoom;
-            viewState.panX = currentCenterX - (currentCenterX - viewState.panX) * zoomRatio;
-            viewState.panY = currentCenterY - (currentCenterY - viewState.panY) * zoomRatio;
-            viewState.zoom = newZoom;
-            
-            lastTouchDistance = currentDistance;
-            lastTouchCenterX = currentCenterX;
-            lastTouchCenterY = currentCenterY;
-            
-            renderGraph();
-        }
-    });
-    
-    canvas.addEventListener('touchend', () => {
-        isDragging = false;
-    });
-    
-    // Set initial cursor
     canvas.style.cursor = 'grab';
+}
+
+function handleWheel(e) {
+    e.preventDefault();
+    
+    const canvas = e.target;
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    
+    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+    const newZoom = Math.max(1, Math.min(10, viewState.zoom * zoomFactor));
+    
+    const zoomRatio = newZoom / viewState.zoom;
+    viewState.panX = mouseX - (mouseX - viewState.panX) * zoomRatio;
+    viewState.panY = mouseY - (mouseY - viewState.panY) * zoomRatio;
+    viewState.zoom = newZoom;
+    
+    renderGraph();
+}
+
+function handleMouseDown(e) {
+    isDragging = true;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+    e.target.style.cursor = 'grabbing';
+}
+
+function handleMouseMove(e) {
+    if (!isDragging) return;
+    
+    const deltaX = e.clientX - lastMouseX;
+    const deltaY = e.clientY - lastMouseY;
+    
+    viewState.panX += deltaX;
+    viewState.panY += deltaY;
+    
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+    
+    renderGraph();
+}
+
+function handleMouseUp(e) {
+    isDragging = false;
+    e.target.style.cursor = 'grab';
+}
+
+function handleMouseLeave(e) {
+    isDragging = false;
+    e.target.style.cursor = 'grab';
+}
+
+let lastTouchDistance = 0;
+let lastTouchCenterX = 0;
+let lastTouchCenterY = 0;
+
+function handleTouchStart(e) {
+    if (e.touches.length === 1) {
+        isDragging = true;
+        lastMouseX = e.touches[0].clientX;
+        lastMouseY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+        isDragging = false;
+        const { distance, centerX, centerY } = calculateTouchMetrics(e.touches[0], e.touches[1]);
+        lastTouchDistance = distance;
+        lastTouchCenterX = centerX;
+        lastTouchCenterY = centerY;
+    }
+}
+
+function handleTouchMove(e) {
+    e.preventDefault();
+    
+    if (e.touches.length === 1 && isDragging) {
+        handleSingleTouchMove(e);
+    } else if (e.touches.length === 2) {
+        handlePinchZoom(e);
+    }
+}
+
+function handleSingleTouchMove(e) {
+    const deltaX = e.touches[0].clientX - lastMouseX;
+    const deltaY = e.touches[0].clientY - lastMouseY;
+    
+    viewState.panX += deltaX;
+    viewState.panY += deltaY;
+    
+    lastMouseX = e.touches[0].clientX;
+    lastMouseY = e.touches[0].clientY;
+    
+    renderGraph();
+}
+
+function handlePinchZoom(e) {
+    const { distance, centerX, centerY } = calculateTouchMetrics(e.touches[0], e.touches[1]);
+    
+    const zoomFactor = distance / lastTouchDistance;
+    const newZoom = Math.max(1, Math.min(10, viewState.zoom * zoomFactor));
+    
+    const zoomRatio = newZoom / viewState.zoom;
+    viewState.panX = centerX - (centerX - viewState.panX) * zoomRatio;
+    viewState.panY = centerY - (centerY - viewState.panY) * zoomRatio;
+    viewState.zoom = newZoom;
+    
+    lastTouchDistance = distance;
+    lastTouchCenterX = centerX;
+    lastTouchCenterY = centerY;
+    
+    renderGraph();
+}
+
+function calculateTouchMetrics(touch1, touch2) {
+    const distance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+    const centerX = (touch1.clientX + touch2.clientX) / 2;
+    const centerY = (touch1.clientY + touch2.clientY) / 2;
+    
+    return { distance, centerX, centerY };
+}
+
+function handleTouchEnd() {
+    isDragging = false;
 }
