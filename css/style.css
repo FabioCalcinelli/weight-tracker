@@ -134,6 +134,7 @@ input[type="number"].error:focus {
 
 .button-group {
     display: flex;
+    flex-direction: column;
     gap: 12px;
     margin-bottom: 30px;
 }
@@ -197,6 +198,36 @@ button.clear:hover {
 }
 
 button.clear:active {
+    transform: translateY(0);
+}
+
+button.import {
+    width: 100%;
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    color: white;
+}
+
+button.import:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(76, 175, 80, 0.4);
+}
+
+button.import:active {
+    transform: translateY(0);
+}
+
+button.export {
+    width: 100%;
+    background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+    color: white;
+}
+
+button.export:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(33, 150, 243, 0.4);
+}
+
+button.export:active {
     transform: translateY(0);
 }
 
