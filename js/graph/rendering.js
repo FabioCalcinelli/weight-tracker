@@ -4,7 +4,7 @@ import { calculateRollingStatistics, getDateRange } from './data.js';
 export function setupCanvas(canvas) {
     const container = canvas.parentElement;
     canvas.width = container.clientWidth;
-    canvas.height = 300;
+    canvas.height = 400;
 
     const ctx = canvas.getContext('2d');
     const width = canvas.width;
@@ -15,8 +15,7 @@ export function setupCanvas(canvas) {
 }
 
 export function drawBackground(ctx, width, height) {
-    ctx.fillStyle = '#f8f9fa';
-    ctx.fillRect(0, 0, width, height);
+    ctx.clearRect(0, 0, width, height);
 }
 
 export function drawNoDataMessage(ctx, width, height) {
