@@ -1,4 +1,4 @@
-const cacheName = 'weight-tracker-v7';
+const cacheName = 'weight-tracker-v8';
 const staticAssets = [
   './',
   './index.html',
