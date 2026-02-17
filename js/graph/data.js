@@ -70,9 +70,10 @@ export function calculateGraphDimensions(width, height, padding, zoom) {
 
 export function clampPanValues(graphWidth, graphHeight, effectiveGraphWidth, effectiveGraphHeight, viewState) {
     const maxPanX = Math.max(0, effectiveGraphWidth - graphWidth);
+    viewState.panX = Math.max(-maxPanX, Math.min(0, viewState.panX));
+
     const maxPanY = Math.max(0, effectiveGraphHeight - graphHeight);
-    viewState.panX = Math.max(-maxPanX, Math.min(maxPanX, viewState.panX));
-    viewState.panY = Math.max(-maxPanY, Math.min(maxPanY, viewState.panY));
+    viewState.panY = Math.max(0, Math.min(maxPanY, viewState.panY));
 }
 
 export function calculateRollingStatistics(sortedHistory, windowDays = 10) {

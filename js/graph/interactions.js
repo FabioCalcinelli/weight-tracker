@@ -77,21 +77,30 @@ function setupGraphOptions() {
     });
 }
 
+function getCanvasScale(canvas) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: canvas.width / rect.width,
+        y: canvas.height / rect.height,
+        rect
+    };
+}
+
 function handleWheel(e) {
     e.preventDefault();
 
     const canvas = e.target;
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
     const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-    const newZoom = Math.max(1, Math.min(10, getViewState().zoom * zoomFactor));
-
-    const zoomRatio = newZoom / getViewState().zoom;
     const viewState = getViewState();
-    viewState.panX = mouseX - (mouseX - viewState.panX) * zoomRatio;
-    viewState.panY = mouseY - (mouseY - viewState.panY) * zoomRatio;
+    const oldZoom = viewState.zoom;
+    const newZoom = Math.max(1, Math.min(10, oldZoom * zoomFactor));
+    const ratio = newZoom / oldZoom;
+
+    const graphWidth = canvas.width - 60 - 30;
+    const graphHeight = canvas.height - 30 - 50;
+
+    viewState.panX = viewState.panX * ratio - graphWidth / 2 * (ratio - 1);
+    viewState.panY = viewState.panY * ratio + graphHeight / 2 * (ratio - 1);
     viewState.zoom = newZoom;
     setViewState(viewState);
 
@@ -108,8 +117,11 @@ function handleMouseDown(e) {
 function handleMouseMove(e) {
     if (!getIsDragging()) return;
 
-    const deltaX = e.clientX - getLastMouseX();
-    const deltaY = e.clientY - getLastMouseY();
+    const canvas = e.target;
+    const { x: scaleX, y: scaleY } = getCanvasScale(canvas);
+
+    const deltaX = (e.clientX - getLastMouseX()) * scaleX;
+    const deltaY = (e.clientY - getLastMouseY()) * scaleY;
 
     const viewState = getViewState();
     viewState.panX += deltaX;
@@ -157,8 +169,11 @@ function handleTouchMove(e) {
 }
 
 function handleSingleTouchMove(e) {
-    const deltaX = e.touches[0].clientX - getLastMouseX();
-    const deltaY = e.touches[0].clientY - getLastMouseY();
+    const canvas = e.target;
+    const { x: scaleX, y: scaleY } = getCanvasScale(canvas);
+
+    const deltaX = (e.touches[0].clientX - getLastMouseX()) * scaleX;
+    const deltaY = (e.touches[0].clientY - getLastMouseY()) * scaleY;
 
     const viewState = getViewState();
     viewState.panX += deltaX;
@@ -174,13 +189,18 @@ function handleSingleTouchMove(e) {
 function handlePinchZoom(e) {
     const { distance, centerX, centerY } = calculateTouchMetrics(e.touches[0], e.touches[1]);
 
+    const canvas = e.target;
+    const oldZoom = getViewState().zoom;
     const zoomFactor = distance / getLastTouchDistance();
-    const newZoom = Math.max(1, Math.min(10, getViewState().zoom * zoomFactor));
+    const newZoom = Math.max(1, Math.min(10, oldZoom * zoomFactor));
+    const ratio = newZoom / oldZoom;
 
-    const zoomRatio = newZoom / getViewState().zoom;
+    const graphWidth = canvas.width - 60 - 30;
+    const graphHeight = canvas.height - 30 - 50;
+
     const viewState = getViewState();
-    viewState.panX = centerX - (centerX - viewState.panX) * zoomRatio;
-    viewState.panY = centerY - (centerY - viewState.panY) * zoomRatio;
+    viewState.panX = viewState.panX * ratio - graphWidth / 2 * (ratio - 1);
+    viewState.panY = viewState.panY * ratio + graphHeight / 2 * (ratio - 1);
     viewState.zoom = newZoom;
     setViewState(viewState);
 
