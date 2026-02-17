@@ -3,6 +3,11 @@ export function formatDate(dateInput) {
         return dateInput;
     }
     
+    if (typeof dateInput === 'string' && dateInput.match(/^\d{2}-\d{2}-\d{4}$/)) {
+        const [day, month, year] = dateInput.split('-');
+        return `${year}-${month}-${day}`;
+    }
+    
     const dateObj = new Date(dateInput);
     const year = dateObj.getFullYear();
     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
